@@ -1,4 +1,5 @@
 /* Walking RPG: local-first static PWA. */
+const APP_VERSION='v1.1.0';
 const Core = (() => {
   const catalog = [];
   const add = (category, rarityRows) => {
@@ -106,6 +107,7 @@ const Core = (() => {
 
 (() => {
   const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));
+  $('appVersion').textContent=APP_VERSION;
   let state, db, worker, mode='daily', sourceImage=null, sourceUrl='', category='all', activeItem=null, editing=false, editDraft=null, toastTimer;
   let shownMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1), editingSaved=null;
   const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
