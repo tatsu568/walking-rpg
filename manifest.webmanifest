@@ -1,0 +1,14 @@
+{
+  "name": "ウォーキングRPG",
+  "short_name": "歩行RPG",
+  "description": "歩いた成果でFC版ドラクエ1の仲間を集める個人用アプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#f4f6f8",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

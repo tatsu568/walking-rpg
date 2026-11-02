@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f6f8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <title>ウォーキングRPG</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="top"><div><h1>ウォーキングRPG</h1><p>歩いた分だけ、冒険の仲間を集めよう。</p></div><button id="backupOpen" class="icon-button" aria-label="バックアップと復元">⋯</button></header>
+  <main>
+    <nav class="tabs" aria-label="メイン画面"><button data-screen="records" class="active">記録</button><button data-screen="gacha">ガチャ</button><button data-screen="collection">図鑑</button></nav>
+
+    <section id="screen-records" class="screen active">
+      <div class="summary-grid">
+        <article class="summary summary-gacha"><span>ガチャ</span><strong class="gacha-available"><span id="availableCount">0</span><small>回</small></strong></article>
+        <article class="summary summary-totals"><div class="summary-total-row"><span>累計歩数</span><strong id="stepProgress">0歩</strong></div><div class="summary-total-row"><span>累計散歩距離</span><strong id="walkProgress">0.00km</strong></div></article>
+      </div>
+      <p class="summary-note">1,000歩ごと・1kmごとに、それぞれガチャを1回獲得。</p>
+      <article class="card">
+        <h2>歩行記録を取り込む</h2>
+        <div class="segmented"><button id="dailyMode" class="selected">日次歩数</button><button id="walkMode">散歩一覧</button></div>
+        <div class="actions image-actions"><label class="button secondary" for="screenshot">写真・ファイルを選ぶ</label><input id="screenshot" type="file" accept="image/*"><div class="paste-actions"><button id="pasteImage" class="secondary">画像を貼り付け</button><div id="pasteTarget" class="paste-target" contenteditable="true" role="textbox" aria-label="画像貼り付け領域">画像をコピーした後、ここをタップして長押し →「ペースト」</div></div></div>
+        <img id="screenshotPreview" class="screenshot hidden" alt="選択したスクリーンショット">
+        <div class="actions"><button id="runOcr" disabled>OCRを実行</button><span id="ocrStatus" class="muted">画像を選択してください</span></div>
+        <progress id="ocrProgress" max="1" value="0" class="hidden"></progress>
+        <p id="ocrTime" class="muted"></p><pre id="ocrError" class="error hidden"></pre>
+      </article>
+      <article id="ocrResults" class="card hidden">
+        <h2 id="ocrHeading">読み取り結果</h2>
+        <div id="dailyResult" class="hidden">
+          <label>日付</label><div class="date-control"><input id="dailyDate" type="date"><button id="dailyToday" class="secondary">今日</button></div>
+          <label for="dailySteps">総歩数</label><input id="dailySteps" type="number" min="0" step="1" inputmode="numeric" placeholder="未取得">
+          <button id="saveDaily" class="full">この日次記録を保存</button>
+        </div>
+        <div id="walkResult" class="hidden"><p class="muted">日付・距離を確認してください。同じ日付と距離の保存済み候補は初期状態で未選択です。</p><div id="walkCandidates"></div><div class="candidate-footer"><strong>今回追加する距離：<span id="selectedDistance">0.00</span>km</strong><button id="saveWalks" class="full">選択した散歩を追加</button></div></div>
+        <details><summary>OCR生テキスト</summary><pre id="ocrText"></pre></details>
+      </article>
+      <article class="card saved-card"><div class="section-title"><h2>保存済み記録</h2></div>
+        <div class="month-navigation"><button id="savedPrevMonth" class="secondary">前月</button><strong id="savedMonthLabel"></strong><button id="savedNextMonth" class="secondary">次月</button></div>
+        <button id="savedThisMonth" class="secondary this-month-button">今月</button>
+        <div id="savedRecords"></div>
+      </article>
+    </section>
+
+    <section id="screen-gacha" class="screen">
+      <article class="card gacha-card"><p class="muted">共通ガチャ</p><strong id="gachaCount" class="big-number">0</strong><span>回分</span><div class="actions center"><button id="drawOne">1回引く</button><button id="drawTen" class="secondary">10連ガチャ</button></div><p id="gachaHint" class="muted"></p></article>
+      <div id="drawResults" class="draw-grid"></div>
+    </section>
+
+    <section id="screen-collection" class="screen">
+      <article class="card collection-summary"><strong id="collectionCount">0/57種類</strong><span>獲得した種類</span></article>
+      <div class="segmented categories"><button data-category="all" class="selected">すべて</button><button data-category="monster">モンスター</button><button data-category="weapon">武器</button><button data-category="spell">呪文</button></div>
+      <div id="collectionGrid" class="collection-grid"></div>
+    </section>
+  </main>
+
+  <dialog id="itemDialog"><div class="dialog-head"><div><h2 id="detailName"></h2><p id="detailMeta" class="muted"></p></div><button id="closeDetail" class="icon-button" aria-label="閉じる">×</button></div><div id="detailBody"></div></dialog>
+  <dialog id="backupDialog"><div class="dialog-head"><h2>バックアップ・復元</h2><button class="icon-button close-dialog" aria-label="閉じる">×</button></div><p class="muted">歩行記録・ガチャ・図鑑資料と画像を含むJSONファイルです。端末外の安全な場所にも保管してください。</p><button id="exportBackup" class="full">JSONをダウンロード</button><label class="button secondary full file-button" for="restoreFile">バックアップから復元</label><input id="restoreFile" type="file" accept="application/json,.json"><p id="backupStatus" class="muted"></p></dialog>
+  <div id="toast" role="status" aria-live="polite" class="toast hidden"></div>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="./app.js"></script>
+  <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));</script>
+</body>
+</html>
