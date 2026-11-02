@@ -13,8 +13,20 @@ const Core = (() => {
     [5, ['りゅうおう','りゅうおう（変身後）']]
   ]);
   add('weapon', [[1,['たけざお','こんぼう']],[2,['どうのつるぎ','てつのおの']],[3,['はがねのつるぎ']],[4,['ほのおのつるぎ']],[5,['ロトのつるぎ']]]);
+  const addedEquipmentIds=[];
+  let equipmentNo=0;
+  const addEquipment = (category, rarityRows) => {
+    rarityRows.forEach(([rarity, names]) => names.forEach(name => {
+      const id=`e${String(++equipmentNo).padStart(2,'0')}`;
+      addedEquipmentIds.push(id);
+      catalog.push({id,category,name,rarity});
+    }));
+  };
+  addEquipment('armor', [[1,['ぬののふく','かわのふく']],[2,['くさりかたびら','てつのよろい']],[3,['はがねのよろい']],[4,['まほうのよろい']],[5,['ロトのよろい']]]);
+  addEquipment('shield', [[1,['かわのたて']],[2,['てつのたて']],[4,['みかがみのたて']]]);
   add('spell', [[1,['ホイミ','ギラ','ラリホー','レミーラ']],[2,['マホトーン','リレミト']],[3,['ルーラ','トヘロス']],[4,['ベホイミ']],[5,['ベギラマ']]]);
   const byId = Object.fromEntries(catalog.map(item => [item.id,item]));
+  const legacyIds=catalog.filter(item=>!addedEquipmentIds.includes(item.id)).map(item=>item.id);
   const newState = () => ({ version:1, daily:[], walks:[], earnedSteps:0, earnedDistance:0, spent:0, items:Object.fromEntries(catalog.map(i=>[i.id,{count:0,main:null,info:null,text:''}])) });
   const totalSteps = s => s.daily.reduce((a,r)=>a+(Number(r.steps)||0),0);
   const totalDistance = s => s.walks.reduce((a,r)=>a+(Number(r.distance)||0),0);
@@ -35,6 +47,9 @@ const Core = (() => {
   }
   function validate(s) {
     if (!s || s.version!==1 || !Array.isArray(s.daily) || !Array.isArray(s.walks) || !s.items || typeof s.items!=='object') throw Error('バックアップ形式が正しくありません。');
+    const knownIds=new Set(catalog.map(item=>item.id)), itemIds=Object.keys(s.items);
+    if(itemIds.some(id=>!knownIds.has(id))||legacyIds.some(id=>!Object.hasOwn(s.items,id)))throw Error('図鑑データ件数が一致しません。');
+    for(const id of addedEquipmentIds)if(!Object.hasOwn(s.items,id))s.items[id]={count:0,main:null,info:null,text:''};
     const validDate=value=>{
       if(typeof value!=='string')return false;
       const match=value.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!match)return false;
@@ -187,7 +202,7 @@ const Core = (() => {
   async function draw(amount){const actual=Math.min(amount,Core.available(state));if(!actual)return;const result=[];for(let i=0;i<actual;i++){const item=Core.pick(state,amount===10&&i===9);if(!item)break;const record=state.items[item.id],isNew=record.count===0;record.count++;result.push({item,isNew});}if(!result.length){toast('抽選対象がありません');return;}state.spent+=result.length;await persist();renderDraw(result);setScreen('gacha');}
   function renderDraw(results){const root=$('drawResults');root.replaceChildren();results.forEach(({item,isNew})=>{const card=document.createElement('article');card.className='draw-card';const data=state.items[item.id];if(data.main){const img=document.createElement('img');img.src=data.main;img.alt=item.name;card.append(img);}else{const ph=document.createElement('div');ph.className='placeholder';ph.textContent=item.category==='spell'?'✦':'◇';card.append(ph);}const title=document.createElement('strong');title.textContent=item.name;card.append(title);const meta=document.createElement('small');meta.textContent=`${'★'.repeat(item.rarity)}　${data.count}/3回`;card.append(meta);if(isNew){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='NEW';card.append(badge);}root.append(card);});}
 
-  function renderCollection(){const owned=Core.catalog.filter(i=>state.items[i.id].count>0);$('collectionCount').textContent=`${owned.length}/57種類`;$('collectionGrid').replaceChildren();Core.catalog.filter(i=>category==='all'||i.category===category).forEach(item=>{const data=state.items[item.id],tile=document.createElement('button');tile.className=`item-tile ${data.count?'':'locked'}`;if(data.count&&data.main){const img=document.createElement('img');img.src=data.main;img.alt='';tile.append(img);}else{const ph=document.createElement('div');ph.className='tile-empty';ph.textContent=data.count?'◇':'？';tile.append(ph);}const name=document.createElement('strong');name.textContent=data.count?item.name:'？？？';tile.append(name);const meta=document.createElement('small');meta.textContent=data.count?`${'★'.repeat(item.rarity)}　${data.count}/3`:'未獲得';tile.append(meta);tile.onclick=()=>{if(!data.count){toast('ガチャで獲得すると詳細を開けます');return;}openItem(item);};$('collectionGrid').append(tile);});}
+  function renderCollection(){const owned=Core.catalog.filter(i=>state.items[i.id].count>0);$('collectionCount').textContent=`${owned.length}/67種類`;$('collectionGrid').replaceChildren();let items=Core.catalog.filter(i=>category==='all'||i.category===category||(category==='equipment'&&['weapon','armor','shield'].includes(i.category)));if(category==='equipment')items=['weapon','armor','shield'].flatMap(group=>[{groupHeading:group},...items.filter(i=>i.category===group)]);items.forEach(item=>{if(item.groupHeading){const heading=document.createElement('h3');heading.className='collection-group-heading';heading.textContent={weapon:'武器',armor:'鎧',shield:'盾'}[item.groupHeading];$('collectionGrid').append(heading);return;}const data=state.items[item.id],tile=document.createElement('button');tile.className=`item-tile ${data.count?'':'locked'}`;if(data.count&&data.main){const img=document.createElement('img');img.src=data.main;img.alt='';tile.append(img);}else{const ph=document.createElement('div');ph.className='tile-empty';ph.textContent=data.count?'◇':'？';tile.append(ph);}const name=document.createElement('strong');name.textContent=data.count?item.name:'？？？';tile.append(name);const meta=document.createElement('small');meta.textContent=data.count?`${'★'.repeat(item.rarity)}　${data.count}/3`:'未獲得';tile.append(meta);tile.onclick=()=>{if(!data.count){toast('ガチャで獲得すると詳細を開けます');return;}openItem(item);};$('collectionGrid').append(tile);});}
   document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{category=b.dataset.category;document.querySelectorAll('[data-category]').forEach(x=>x.classList.toggle('selected',x===b));renderCollection();});
 
   function hasMaterial(data){return !!(data.main||data.info||data.text.trim());}
@@ -208,7 +223,7 @@ const Core = (() => {
 
   $('backupOpen').onclick=()=>$('backupDialog').showModal();document.querySelectorAll('.close-dialog').forEach(b=>b.onclick=()=>b.closest('dialog').close());
   $('exportBackup').onclick=()=>{const payload={app:'walking-rpg',version:1,exportedAt:new Date().toISOString(),data:state};const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const date=new Date();const stamp=`${String(date.getFullYear()).slice(-2)}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;a.download=`WRPG_BKUP_${stamp}.json`;a.click();URL.revokeObjectURL(url);$('backupStatus').textContent='バックアップをダウンロードしました。';};
-  $('restoreFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='walking-rpg'||payload.version!==1)throw Error('対応していないバックアップです');Core.validate(payload.data);if(!confirm('現在の記録・ガチャ・図鑑資料をすべてバックアップの内容で上書きします。復元しますか？'))return;const next=Core.validate(payload.data);await dbWrite(next);state=next;render();$('backupStatus').textContent='復元しました。';toast('バックアップを復元しました');}catch(err){$('backupStatus').textContent=`復元しませんでした：${err.message}`;toast(`復元できません：${err.message}`);}finally{e.target.value='';}};
+  $('restoreFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='walking-rpg'||payload.version!==1)throw Error('対応していないバックアップです');const next=Core.validate(clone(payload.data));if(!confirm('現在の記録・ガチャ・図鑑資料をすべてバックアップの内容で上書きします。復元しますか？'))return;await dbWrite(next);state=next;render();$('backupStatus').textContent='復元しました。';toast('バックアップを復元しました');}catch(err){$('backupStatus').textContent=`復元しませんでした：${err.message}`;toast(`復元できません：${err.message}`);}finally{e.target.value='';}};
 
-  (async()=>{try{db=await openDB();state=await dbRead();Core.validate(state);rewardUpdate();await dbWrite(state);render();}catch(e){toast(`起動または保存に失敗しました：${e.message}`);}})();
+  (async()=>{try{db=await openDB();state=Core.validate(await dbRead());rewardUpdate();await dbWrite(state);render();}catch(e){toast(`起動または保存に失敗しました：${e.message}`);}})();
 })();
