@@ -1,5 +1,5 @@
 /* Walking RPG: local-first static PWA. */
-const APP_VERSION='v1.1.0';
+const APP_VERSION='v1.2.5';
 const Core = (() => {
   const catalog = [];
   const add = (category, rarityRows) => {
@@ -108,7 +108,7 @@ const Core = (() => {
 (() => {
   const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));
   $('appVersion').textContent=APP_VERSION;
-  let state, db, worker, mode='daily', sourceImage=null, sourceUrl='', category='all', activeItem=null, editing=false, editDraft=null, toastTimer;
+  let state, db, worker, mode='daily', sourceImage=null, sourceUrl='', category='all', ownership='owned', activeItem=null, editing=false, editDraft=null, toastTimer;
   let shownMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1), editingSaved=null;
   const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const toast=message=>{const el=$('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.add('hidden'),2600);};
@@ -202,15 +202,43 @@ const Core = (() => {
 
   $('drawOne').onclick=()=>draw(1);$('drawTen').onclick=()=>draw(10);
   async function draw(amount){const actual=Math.min(amount,Core.available(state));if(!actual)return;const result=[];for(let i=0;i<actual;i++){const item=Core.pick(state,amount===10&&i===9);if(!item)break;const record=state.items[item.id],isNew=record.count===0;record.count++;result.push({item,isNew});}if(!result.length){toast('抽選対象がありません');return;}state.spent+=result.length;await persist();renderDraw(result);setScreen('gacha');}
-  function renderDraw(results){const root=$('drawResults');root.replaceChildren();results.forEach(({item,isNew})=>{const card=document.createElement('article');card.className='draw-card';const data=state.items[item.id];if(data.main){const img=document.createElement('img');img.src=data.main;img.alt=item.name;card.append(img);}else{const ph=document.createElement('div');ph.className='placeholder';ph.textContent=item.category==='spell'?'✦':'◇';card.append(ph);}const title=document.createElement('strong');title.textContent=item.name;card.append(title);const meta=document.createElement('small');meta.textContent=`${'★'.repeat(item.rarity)}　${data.count}/3回`;card.append(meta);if(isNew){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='NEW';card.append(badge);}root.append(card);});}
+  function renderDraw(results){const root=$('drawResults');root.replaceChildren();results.forEach(({item,isNew})=>{const card=document.createElement('article');card.className='draw-card';if(item.rarity>=4)card.classList.add(`rarity-card-${item.rarity}`);const data=state.items[item.id];if(data.main){const img=document.createElement('img');img.src=data.main;img.alt=item.name;card.append(img);}else{const ph=document.createElement('div');ph.className='placeholder';ph.textContent=item.category==='spell'?'✦':'◇';card.append(ph);}const title=document.createElement('strong');title.textContent=item.name;card.append(title);const meta=document.createElement('small');meta.className='rarity-meta';meta.append(rarityStars(item.rarity),acquisitionCount(`${data.count}/3`));card.append(meta);if(isNew){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='NEW';card.append(badge);}root.append(card);});}
 
-  function renderCollection(){const owned=Core.catalog.filter(i=>state.items[i.id].count>0);$('collectionCount').textContent=`${owned.length}/67種類`;$('collectionGrid').replaceChildren();let items=Core.catalog.filter(i=>category==='all'||i.category===category||(category==='equipment'&&['weapon','armor','shield'].includes(i.category)));if(category==='equipment')items=['weapon','armor','shield'].flatMap(group=>[{groupHeading:group},...items.filter(i=>i.category===group)]);items.forEach(item=>{if(item.groupHeading){const heading=document.createElement('h3');heading.className='collection-group-heading';heading.textContent={weapon:'武器',armor:'鎧',shield:'盾'}[item.groupHeading];$('collectionGrid').append(heading);return;}const data=state.items[item.id],tile=document.createElement('button');tile.className=`item-tile ${data.count?'':'locked'}`;if(data.count&&data.main){const img=document.createElement('img');img.src=data.main;img.alt='';tile.append(img);}else{const ph=document.createElement('div');ph.className='tile-empty';ph.textContent=data.count?'◇':'？';tile.append(ph);}const name=document.createElement('strong');name.textContent=data.count?item.name:'？？？';tile.append(name);const meta=document.createElement('small');meta.textContent=data.count?`${'★'.repeat(item.rarity)}　${data.count}/3`:'未獲得';tile.append(meta);tile.onclick=()=>{if(!data.count){toast('ガチャで獲得すると詳細を開けます');return;}openItem(item);};$('collectionGrid').append(tile);});}
+  function acquisitionCount(text){const count=document.createElement('span');count.className='acquisition-count';count.textContent=text;return count;}
+  function rarityStars(rarity){
+    const stars=document.createElement('span');stars.className=`rarity-stars rarity-${rarity}`;
+    stars.textContent='★'.repeat(rarity);stars.setAttribute('aria-label',`レア度${rarity}`);return stars;
+  }
+  function lockIcon(){
+    const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('collection-lock');
+    const path=document.createElementNS(ns,'path');
+    path.setAttribute('d','M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5zM12 14v3');
+    svg.append(path);return svg;
+  }
+  function renderCollection(){
+    const owned=Core.catalog.filter(i=>state.items[i.id].count>0),root=$('collectionGrid');
+    $('collectionCount').textContent=`${owned.length}/67種類`;root.replaceChildren();
+    let items=Core.catalog.filter(i=>(category==='all'||i.category===category||(category==='equipment'&&['weapon','armor','shield'].includes(i.category)))&&(ownership==='all'||(ownership==='owned'?state.items[i.id].count>0:state.items[i.id].count===0)));
+    if(!items.length){const empty=document.createElement('p');empty.className='empty collection-empty';empty.textContent='該当するアイテムはありません。';root.append(empty);return;}
+    if(category==='equipment')items=['weapon','armor','shield'].flatMap(group=>{const matches=items.filter(i=>i.category===group);return matches.length?[{groupHeading:group},...matches]:[];});
+    items.forEach(item=>{
+      if(item.groupHeading){const heading=document.createElement('h3');heading.className='collection-group-heading';heading.textContent={weapon:'武器',armor:'鎧',shield:'盾'}[item.groupHeading];root.append(heading);return;}
+      const data=state.items[item.id],tile=document.createElement('button');tile.className=`item-tile ${data.count?'':'locked'}`;if(data.count&&item.rarity>=4)tile.classList.add(`rarity-card-${item.rarity}`);
+      if(data.count&&data.main){const img=document.createElement('img');img.src=data.main;img.alt='';tile.append(img);}
+      else{const ph=document.createElement('div');ph.className='tile-empty';if(data.count)ph.textContent='◇';else ph.append(lockIcon());tile.append(ph);}
+      const name=document.createElement('strong');name.textContent=data.count?item.name:'？？？';tile.append(name);
+      const meta=document.createElement('small');if(data.count){meta.className='rarity-meta';meta.append(rarityStars(item.rarity),acquisitionCount(`${data.count}/3`));}else meta.textContent='未獲得';tile.append(meta);
+      tile.onclick=()=>{if(!data.count){toast('ガチャで獲得すると詳細を開けます');return;}openItem(item);};root.append(tile);
+    });
+  }
+  document.querySelectorAll('[data-ownership]').forEach(b=>b.onclick=()=>{ownership=b.dataset.ownership;document.querySelectorAll('[data-ownership]').forEach(x=>{x.classList.toggle('selected',x===b);x.setAttribute('aria-pressed',String(x===b));});renderCollection();});
   document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{category=b.dataset.category;document.querySelectorAll('[data-category]').forEach(x=>x.classList.toggle('selected',x===b));renderCollection();});
 
   function hasMaterial(data){return !!(data.main||data.info||data.text.trim());}
   function openItem(item){activeItem=item;editDraft=clone(state.items[item.id]);editing=!hasMaterial(editDraft);renderItem();$('itemDialog').showModal();}
   $('closeDetail').onclick=()=>$('itemDialog').close();
-  function renderItem(){const item=activeItem,data=editing?editDraft:state.items[item.id];$('detailName').textContent=item.name;$('detailMeta').textContent=`${'★'.repeat(item.rarity)}　獲得 ${state.items[item.id].count}/3回`;
+  function renderItem(){const item=activeItem,data=editing?editDraft:state.items[item.id];$('detailName').textContent=item.name;$('detailMeta').replaceChildren(rarityStars(item.rarity),document.createTextNode(`　獲得 ${state.items[item.id].count}/3回`));
     const root=$('detailBody');root.replaceChildren();
     if(!editing){const edit=document.createElement('button');edit.textContent='編集';edit.onclick=()=>{editDraft=clone(state.items[item.id]);editing=true;renderItem();};root.append(edit);if(item.category!=='spell'&&data.main){const im=document.createElement('img');im.className='detail-image';im.src=data.main;im.alt='メイン画像';root.append(im);}if(data.info){const im=document.createElement('img');im.className='detail-image';im.src=data.info;im.alt='情報画像';root.append(im);}if(data.text.trim()){const p=document.createElement('p');p.className='detail-text';p.textContent=data.text;root.append(p);}return;}
     if(item.category!=='spell')renderImageSlot(root,'main','メイン画像',512);
