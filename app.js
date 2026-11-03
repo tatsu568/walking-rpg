@@ -1,5 +1,5 @@
 /* Walking RPG: local-first static PWA. */
-const APP_VERSION='v1.2.5';
+const APP_VERSION='v1.3.0';
 const Core = (() => {
   const catalog = [];
   const add = (category, rarityRows) => {
@@ -33,7 +33,7 @@ const Core = (() => {
   const totalDistance = s => s.walks.reduce((a,r)=>a+(Number(r.distance)||0),0);
   function award(s) {
     s.earnedSteps = Math.max(s.earnedSteps, Math.floor(totalSteps(s)/1000));
-    s.earnedDistance = Math.max(s.earnedDistance, Math.floor(totalDistance(s)));
+    s.earnedDistance = Math.max(s.earnedDistance, Math.floor(totalDistance(s))*2);
   }
   const available = s => Math.max(0,s.earnedSteps+s.earnedDistance-s.spent);
   function pick(s, boosted=false, rng=Math.random) {
@@ -68,6 +68,7 @@ const Core = (() => {
     }
     const walkIds=new Set();for (const row of s.walks){if(typeof row.id!=='string'||!row.id||!validDate(row.date)||!Number.isFinite(row.distance)||row.distance<0||walkIds.has(row.id))throw Error('散歩記録に不正または重複したID・日付・距離があります。');walkIds.add(row.id);}
     for (const key of ['earnedSteps','earnedDistance','spent']) if (!Number.isInteger(s[key]) || s[key]<0) throw Error('ガチャ状態の値が不正です。');
+    // Accept legacy 1-per-km counters; award runs only after full validation, before saving.
     if(s.spent>s.earnedSteps+s.earnedDistance||s.earnedSteps<Math.floor(totalSteps(s)/1000)||s.earnedDistance<Math.floor(totalDistance(s)))throw Error('ガチャ回数の状態が記録と整合しません。');
     if (Object.keys(s.items).length!==catalog.length) throw Error('図鑑データ件数が一致しません。');
     for (const item of catalog) {
@@ -253,7 +254,7 @@ const Core = (() => {
 
   $('backupOpen').onclick=()=>$('backupDialog').showModal();document.querySelectorAll('.close-dialog').forEach(b=>b.onclick=()=>b.closest('dialog').close());
   $('exportBackup').onclick=()=>{const payload={app:'walking-rpg',version:1,exportedAt:new Date().toISOString(),data:state};const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const date=new Date();const stamp=`${String(date.getFullYear()).slice(-2)}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;a.download=`WRPG_BKUP_${stamp}.json`;a.click();URL.revokeObjectURL(url);$('backupStatus').textContent='バックアップをダウンロードしました。';};
-  $('restoreFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='walking-rpg'||payload.version!==1)throw Error('対応していないバックアップです');const next=Core.validate(clone(payload.data));if(!confirm('現在の記録・ガチャ・図鑑資料をすべてバックアップの内容で上書きします。復元しますか？'))return;await dbWrite(next);state=next;render();$('backupStatus').textContent='復元しました。';toast('バックアップを復元しました');}catch(err){$('backupStatus').textContent=`復元しませんでした：${err.message}`;toast(`復元できません：${err.message}`);}finally{e.target.value='';}};
+  $('restoreFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='walking-rpg'||payload.version!==1)throw Error('対応していないバックアップです');const next=Core.validate(clone(payload.data));if(!confirm('現在の記録・ガチャ・図鑑資料をすべてバックアップの内容で上書きします。復元しますか？'))return;Core.award(next);await dbWrite(next);state=next;render();$('backupStatus').textContent='復元しました。';toast('バックアップを復元しました');}catch(err){$('backupStatus').textContent=`復元しませんでした：${err.message}`;toast(`復元できません：${err.message}`);}finally{e.target.value='';}};
 
   (async()=>{try{db=await openDB();state=Core.validate(await dbRead());rewardUpdate();await dbWrite(state);render();}catch(e){toast(`起動または保存に失敗しました：${e.message}`);}})();
 })();
