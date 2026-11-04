@@ -25,10 +25,24 @@
       <p class="summary-note">1,000歩ごとに1回・散歩1kmごとに2回、ガチャを獲得。</p>
       <article class="card">
         <h2>歩行記録を取り込む</h2>
-        <div class="segmented"><button id="dailyMode" class="selected">日次歩数</button><button id="walkMode">散歩一覧</button></div>
-        <div class="actions image-actions"><label class="button secondary" for="screenshot">写真・ファイルを選ぶ</label><input id="screenshot" type="file" accept="image/*"><div class="paste-actions"><button id="pasteImage" class="secondary">画像を貼り付け</button><div id="pasteTarget" class="paste-target" contenteditable="true" role="textbox" aria-label="画像貼り付け領域">画像をコピーした後、ここをタップして長押し →「ペースト」</div></div></div>
+        <div class="import-columns">
+          <section class="import-column" aria-labelledby="dailyImportHeading">
+            <h3 id="dailyImportHeading">日次歩数</h3>
+            <div id="dailyPasteTarget" class="import-paste" contenteditable="true" role="textbox" aria-label="日次歩数の画像貼り付け領域" aria-describedby="dailyPasteHint" spellcheck="false">画像を貼り付け</div>
+            <p id="dailyPasteHint" class="import-hint">長押ししてペースト</p>
+            <button id="dailyImportView" class="secondary import-view hidden" type="button">画像・結果を確認</button>
+            <details class="import-files"><summary>写真・ファイル</summary><label class="button secondary" for="dailyScreenshot">画像を選ぶ</label><input id="dailyScreenshot" type="file" accept="image/*" hidden></details>
+          </section>
+          <section class="import-column" aria-labelledby="walkImportHeading">
+            <h3 id="walkImportHeading">散歩一覧</h3>
+            <div id="walkPasteTarget" class="import-paste" contenteditable="true" role="textbox" aria-label="散歩一覧の画像貼り付け領域" aria-describedby="walkPasteHint" spellcheck="false">画像を貼り付け</div>
+            <p id="walkPasteHint" class="import-hint">長押ししてペースト</p>
+            <button id="walkImportView" class="secondary import-view hidden" type="button">画像・結果を確認</button>
+            <details class="import-files"><summary>写真・ファイル</summary><label class="button secondary" for="walkScreenshot">画像を選ぶ</label><input id="walkScreenshot" type="file" accept="image/*" hidden></details>
+          </section>
+        </div>
         <img id="screenshotPreview" class="screenshot hidden" alt="選択したスクリーンショット">
-        <div class="actions"><button id="runOcr" disabled>OCRを実行</button><span id="ocrStatus" class="muted">画像を選択してください</span></div>
+        <div class="actions import-ocr-actions"><button id="runOcr" disabled>OCRを実行</button><button id="cancelImport" class="secondary hidden" type="button">キャンセル</button></div><p id="ocrStatus" class="muted" role="status">画像を選択してください</p>
         <progress id="ocrProgress" max="1" value="0" class="hidden"></progress>
         <p id="ocrTime" class="muted"></p><pre id="ocrError" class="error hidden"></pre>
       </article>
@@ -62,7 +76,7 @@
     </section>
   </main>
 
-  <dialog id="itemDialog"><div class="dialog-head"><div><h2 id="detailName"></h2><p id="detailMeta" class="muted"></p></div><button id="closeDetail" class="icon-button" aria-label="閉じる">×</button></div><div id="detailBody"></div></dialog>
+  <dialog id="itemDialog" aria-labelledby="detailName"><div class="detail-panel"><div class="dialog-head"><div><h2 id="detailName"></h2><p id="detailMeta" class="muted"></p></div><button id="closeDetail" class="icon-button" aria-label="閉じる">×</button></div><div id="detailBody"></div></div></dialog>
   <dialog id="backupDialog"><div class="dialog-head"><h2>バックアップ・復元</h2><button class="icon-button close-dialog" aria-label="閉じる">×</button></div><p class="muted">歩行記録・ガチャ・図鑑資料と画像を含むJSONファイルです。端末外の安全な場所にも保管してください。</p><button id="exportBackup" class="full">JSONをダウンロード</button><label class="button secondary full file-button" for="restoreFile">バックアップから復元</label><input id="restoreFile" type="file" accept="application/json,.json"><p id="backupStatus" class="muted"></p></dialog>
   <div id="toast" role="status" aria-live="polite" class="toast hidden"></div>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>

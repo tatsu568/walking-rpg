@@ -1,5 +1,5 @@
 /* Walking RPG: local-first static PWA. */
-const APP_VERSION='v1.3.0';
+const APP_VERSION='v1.4.4';
 const Core = (() => {
   const catalog = [];
   const add = (category, rarityRows) => {
@@ -109,7 +109,7 @@ const Core = (() => {
 (() => {
   const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));
   $('appVersion').textContent=APP_VERSION;
-  let state, db, worker, mode='daily', sourceImage=null, sourceUrl='', category='all', ownership='owned', activeItem=null, editing=false, editDraft=null, toastTimer;
+  let state, db, worker, mode='daily', category='all', ownership='owned', activeItem=null, editing=false, editDraft=null, toastTimer;
   let shownMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1), editingSaved=null;
   const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const toast=message=>{const el=$('toast');el.textContent=message;el.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.add('hidden'),2600);};
@@ -181,25 +181,76 @@ const Core = (() => {
   $('savedThisMonth').onclick=()=>{editingSaved=null;const now=new Date();shownMonth=new Date(now.getFullYear(),now.getMonth(),1);renderSaved();};
   window.addEventListener('pageshow',()=>{editingSaved=null;const now=new Date();shownMonth=new Date(now.getFullYear(),now.getMonth(),1);if(state)renderSaved();});
 
-  function setMode(next){mode=next;$('dailyMode').classList.toggle('selected',mode==='daily');$('walkMode').classList.toggle('selected',mode==='walk');$('ocrResults').classList.add('hidden');}
-  $('dailyMode').onclick=()=>setMode('daily');$('walkMode').onclick=()=>setMode('walk');
-  function loadImage(file){if(!file||!file.type.startsWith('image/')){toast('画像を取得できませんでした');return;}sourceImage=file;if(sourceUrl)URL.revokeObjectURL(sourceUrl);sourceUrl=URL.createObjectURL(file);$('screenshotPreview').src=sourceUrl;$('screenshotPreview').classList.remove('hidden');$('runOcr').disabled=false;$('ocrStatus').textContent=`画像を読み込みました（${Math.round(file.size/1024)}KB）`;}
-  $('screenshot').onchange=e=>loadImage(e.target.files?.[0]);
-  $('pasteTarget').addEventListener('paste',e=>{const f=[...(e.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'))?.getAsFile();e.preventDefault();if(f)loadImage(f);else toast('クリップボードに画像がありません');});
-  $('pasteImage').onclick=async()=>{try{if(!navigator.clipboard?.read)throw Error('画像貼り付けボタンはHTTPSで利用できます。貼り付け領域を長押しして「ペースト」するか、ファイルを選んでください。');for(const item of await navigator.clipboard.read()){const type=item.types.find(t=>t.startsWith('image/'));if(type){loadImage(await item.getType(type));return;}}throw Error('クリップボードに画像がありません');}catch(e){toast(e.message);}};
+  let ocrBusy=false,activeImportJob=null;
+  const emptyImport=()=>({file:null,url:'',status:'画像を選択してください',text:'',time:'',error:'',results:false,progress:0});
+  const imports={daily:emptyImport(),walk:emptyImport()};
+  const importLabel=type=>type==='daily'?'日次歩数':'散歩一覧';
+  const validImportJob=job=>imports[job.type]===job.draft;
+  function showImport(type){
+    mode=type;const draft=imports[type],label=importLabel(type);
+    for(const t of ['daily','walk'])$(`${t}ImportView`).classList.toggle('hidden',!imports[t].file);
+    $('screenshotPreview').classList.toggle('hidden',!draft.file);
+    if(draft.url)$('screenshotPreview').src=draft.url;else $('screenshotPreview').removeAttribute('src');
+    $('screenshotPreview').alt=`${label}の選択画像`;
+    $('runOcr').disabled=!draft.file||ocrBusy;$('runOcr').textContent=draft.file?`${label}をOCR`:'OCRを実行';
+    $('cancelImport').classList.toggle('hidden',!draft.file);$('cancelImport').setAttribute('aria-label',`${label}の取り込みをキャンセル`);
+    $('ocrHeading').textContent=`${label}の読み取り結果`;$('ocrStatus').textContent=draft.status;
+    $('ocrText').textContent=draft.text;$('ocrTime').textContent=draft.time;$('ocrError').textContent=draft.error;
+    $('ocrError').classList.toggle('hidden',!draft.error);$('ocrResults').classList.toggle('hidden',!draft.results);
+    $('dailyResult').classList.toggle('hidden',type!=='daily');$('walkResult').classList.toggle('hidden',type!=='walk');
+    $('ocrProgress').classList.toggle('hidden',!(activeImportJob&&validImportJob(activeImportJob)&&activeImportJob.type===type));$('ocrProgress').value=draft.progress;
+  }
+  function resetImport(type){
+    const old=imports[type];if(old.url)URL.revokeObjectURL(old.url);imports[type]=emptyImport();
+    $(`${type}Screenshot`).value='';$(`${type}PasteTarget`).textContent='画像を貼り付け';
+    $(`${type}Screenshot`).closest('details').open=false;
+    if(type==='daily'){$('dailyDate').value='';$('dailySteps').value='';}
+    else{candidates=[];$('walkCandidates').replaceChildren();$('selectedDistance').textContent='0.00';}
+  }
+  function loadImage(file,type){
+    if(!file||!file.type.startsWith('image/')){toast('画像を取得できませんでした');return;}
+    resetImport(type);const draft=imports[type];draft.file=file;draft.url=URL.createObjectURL(file);
+    draft.status=`${importLabel(type)}の画像を読み込みました（${Math.round(file.size/1024)}KB）`;showImport(type);
+  }
+  $('cancelImport').onclick=()=>{resetImport(mode);showImport(mode);};
+  for(const type of ['daily','walk']){
+    $(`${type}ImportView`).onclick=()=>showImport(type);
+    $(`${type}Screenshot`).onchange=e=>{const file=e.target.files?.[0];if(file)loadImage(file,type);e.target.value='';};
+    $(`${type}PasteTarget`).addEventListener('paste',e=>{
+      const file=[...(e.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'))?.getAsFile();
+      e.preventDefault();if(file)loadImage(file,type);else toast('クリップボードに画像がありません');
+    });
+  }
   $('dailyToday').onclick=()=>{$('dailyDate').value=todayISO();};
-  $('runOcr').onclick=async()=>{if(!sourceImage)return;const start=performance.now();$('runOcr').disabled=true;$('ocrProgress').classList.remove('hidden');$('ocrProgress').value=0;$('ocrError').classList.add('hidden');$('ocrStatus').textContent='OCRを準備しています…';$('ocrTime').textContent='処理中…';
-    try{if(!window.Tesseract)throw Error('Tesseract.jsを読み込めません。インターネット接続を確認してください。');if(!worker){worker=await Tesseract.createWorker('jpn+eng',1,{logger:m=>{if(m.status)$('ocrStatus').textContent=m.status;if(typeof m.progress==='number')$('ocrProgress').value=m.progress;}});await worker.setParameters({preserve_interword_spaces:'1'});}const result=await worker.recognize(sourceImage),text=result.data.text||'';$('ocrText').textContent=text||'（文字を取得できませんでした）';$('ocrResults').classList.remove('hidden');if(mode==='daily'){const parsed=Core.parseDaily(text);$('dailyDate').value=parsed.date;$('dailySteps').value=parsed.steps;$('dailyResult').classList.remove('hidden');$('walkResult').classList.add('hidden');}else{renderCandidates(Core.parseWalks(text));$('dailyResult').classList.add('hidden');$('walkResult').classList.remove('hidden');}$('ocrStatus').textContent='読み取り完了。登録前に確認してください。';}
-    catch(e){$('ocrError').textContent=e.stack||String(e);$('ocrError').classList.remove('hidden');$('ocrStatus').textContent='OCRに失敗しました';}finally{$('ocrTime').textContent=`処理時間：${((performance.now()-start)/1000).toFixed(2)}秒`;$('ocrProgress').classList.add('hidden');$('runOcr').disabled=false;}};
+  $('runOcr').onclick=async()=>{
+    const type=mode,draft=imports[type];if(!draft.file||ocrBusy)return;
+    const job={type,draft},start=performance.now();activeImportJob=job;ocrBusy=true;
+    draft.status='OCRを準備しています…';draft.time='処理中…';draft.error='';draft.progress=0;showImport(mode);
+    try{
+      if(!window.Tesseract)throw Error('Tesseract.jsを読み込めません。インターネット接続を確認してください。');
+      if(!worker){worker=await Tesseract.createWorker('jpn+eng',1,{logger:m=>{
+        const current=activeImportJob;if(!current||!validImportJob(current))return;
+        if(m.status)current.draft.status=m.status;if(typeof m.progress==='number')current.draft.progress=m.progress;
+        if(mode===current.type)showImport(mode);
+      }});await worker.setParameters({preserve_interword_spaces:'1'});}
+      if(!validImportJob(job))return;
+      const result=await worker.recognize(draft.file);if(!validImportJob(job))return;
+      const text=result.data.text||'';draft.text=text||'（文字を取得できませんでした）';draft.results=true;
+      if(type==='daily'){const parsed=Core.parseDaily(text);$('dailyDate').value=parsed.date;$('dailySteps').value=parsed.steps;}
+      else renderCandidates(Core.parseWalks(text));
+      draft.status='読み取り完了。登録前に確認してください。';
+    }catch(e){if(validImportJob(job)){draft.error=e.stack||String(e);draft.status='OCRに失敗しました';}}
+    finally{if(validImportJob(job))draft.time=`処理時間：${((performance.now()-start)/1000).toFixed(2)}秒`;activeImportJob=null;ocrBusy=false;showImport(mode);}
+  };
   function isDuplicate(date,distance){return state.walks.some(w=>w.date===date&&Number(w.distance)===Number(distance));}
   let candidates=[];
   function renderCandidates(rows){candidates=rows.map(r=>{const duplicate=!!r.date&&isDuplicate(r.date,r.distance);return {...r,duplicate,selected:!duplicate,touched:false};});const root=$('walkCandidates');root.replaceChildren();
     if(!candidates.length){const p=document.createElement('p');p.className='empty';p.textContent='散歩候補を読み取れませんでした。別の画像を選ぶか、生テキストを確認してください。';root.append(p);}
-    candidates.forEach((r,index)=>{const block=document.createElement('div');block.className='candidate';const head=document.createElement('div');head.className='candidate-header';const check=document.createElement('input');check.type='checkbox';check.checked=r.selected;check.onchange=()=>{r.selected=check.checked;r.touched=true;updateCandidateTotal();};const name=document.createElement('strong');name.textContent=`記録 ${index+1}`;head.append(check,name);block.append(head);const fields=document.createElement('div');fields.className='candidate-fields';const date=document.createElement('input');date.type='date';date.value=r.date;date.setAttribute('aria-label','散歩日付');const distance=document.createElement('input');distance.type='number';distance.min='0';distance.step='.01';distance.value=r.distance;distance.setAttribute('aria-label','距離 km');fields.append(date,distance);block.append(fields);const duplicate=document.createElement('p');duplicate.className='duplicate';block.append(duplicate);
-      const refresh=()=>{r.date=date.value;r.distance=Number(distance.value);r.duplicate=!!r.date&&isDuplicate(r.date,r.distance);duplicate.textContent=r.duplicate?'登録済み候補（日付＋距離が一致）':'';if(!r.touched){r.selected=!r.duplicate;check.checked=r.selected;}updateCandidateTotal();};date.oninput=refresh;distance.oninput=refresh;refresh();root.append(block);});updateCandidateTotal();}
+    candidates.forEach((r,index)=>{const block=document.createElement('div');block.className='candidate';const head=document.createElement('div');head.className='candidate-header';const check=document.createElement('input');check.type='checkbox';check.checked=r.selected;check.onchange=()=>{r.selected=check.checked;r.touched=true;updateCandidateTotal();};const name=document.createElement('strong');name.textContent=`記録 ${index+1}`;head.append(check,name);block.append(head);const fields=document.createElement('div');fields.className='candidate-fields';const date=document.createElement('input');date.type='date';date.value=r.date;date.setAttribute('aria-label','散歩日付');const distance=document.createElement('input');distance.type='number';distance.min='0';distance.step='.01';distance.value=r.distance;distance.setAttribute('aria-label','距離 km');const dateControl=document.createElement('div');dateControl.className='candidate-date-control';dateControl.append(date);const today=document.createElement('button');today.type='button';today.className='secondary candidate-today';today.textContent='今日';today.setAttribute('aria-label',`記録 ${index+1} の日付を今日にする`);fields.append(dateControl,today,distance);block.append(fields);const duplicate=document.createElement('p');duplicate.className='duplicate';block.append(duplicate);
+      const refresh=()=>{r.date=date.value;r.distance=Number(distance.value);r.duplicate=!!r.date&&isDuplicate(r.date,r.distance);duplicate.textContent=r.duplicate?'登録済み候補（日付＋距離が一致）':'';if(!r.touched){r.selected=!r.duplicate;check.checked=r.selected;}updateCandidateTotal();};date.oninput=refresh;distance.oninput=refresh;today.onclick=()=>{date.value=todayISO();refresh();};refresh();root.append(block);});updateCandidateTotal();}
   function updateCandidateTotal(){$('selectedDistance').textContent=candidates.filter(c=>c.selected).reduce((a,c)=>a+(Number(c.distance)||0),0).toFixed(2);}
-  $('saveDaily').onclick=async()=>{const date=$('dailyDate').value,steps=Number($('dailySteps').value);if(!date||$('dailySteps').value===''||!Number.isInteger(steps)||steps<0){toast('日付と歩数を確認してください');return;}const matches=state.daily.reduce((n,r)=>n+(r.date===date?1:0),0);if(matches>1){toast('同じ日付の日次記録が重複しているため保存を中止しました。データを変更していません');return;}const old=state.daily.findIndex(r=>r.date===date);if(old>=0)state.daily[old]={date,steps};else state.daily.push({date,steps});rewardUpdate();await persist();$('ocrResults').classList.add('hidden');toast('日次記録を保存しました');};
-  $('saveWalks').onclick=async()=>{const selected=candidates.filter(c=>c.selected);if(!selected.length){toast('追加する散歩を選択してください');return;}if(selected.some(r=>!r.date||!Number.isFinite(Number(r.distance))||Number(r.distance)<=0)){toast('選択した記録の日付・距離を確認してください');return;}for(const r of selected)state.walks.push({id:crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`,date:r.date,distance:Number(r.distance)});rewardUpdate();await persist();$('ocrResults').classList.add('hidden');toast(`${selected.length}件の散歩を追加しました`);};
+  $('saveDaily').onclick=async()=>{const date=$('dailyDate').value,steps=Number($('dailySteps').value);if(!date||$('dailySteps').value===''||!Number.isInteger(steps)||steps<0){toast('日付と歩数を確認してください');return;}const matches=state.daily.reduce((n,r)=>n+(r.date===date?1:0),0);if(matches>1){toast('同じ日付の日次記録が重複しているため保存を中止しました。データを変更していません');return;}const old=state.daily.findIndex(r=>r.date===date);if(old>=0)state.daily[old]={date,steps};else state.daily.push({date,steps});rewardUpdate();await persist();imports.daily.results=false;showImport(mode);toast('日次記録を保存しました');};
+  $('saveWalks').onclick=async()=>{const selected=candidates.filter(c=>c.selected);if(!selected.length){toast('追加する散歩を選択してください');return;}if(selected.some(r=>!r.date||!Number.isFinite(Number(r.distance))||Number(r.distance)<=0)){toast('選択した記録の日付・距離を確認してください');return;}for(const r of selected)state.walks.push({id:crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`,date:r.date,distance:Number(r.distance)});rewardUpdate();await persist();imports.walk.results=false;showImport(mode);toast(`${selected.length}件の散歩を追加しました`);};
 
   $('drawOne').onclick=()=>draw(1);$('drawTen').onclick=()=>draw(10);
   async function draw(amount){const actual=Math.min(amount,Core.available(state));if(!actual)return;const result=[];for(let i=0;i<actual;i++){const item=Core.pick(state,amount===10&&i===9);if(!item)break;const record=state.items[item.id],isNew=record.count===0;record.count++;result.push({item,isNew});}if(!result.length){toast('抽選対象がありません');return;}state.spent+=result.length;await persist();renderDraw(result);setScreen('gacha');}
@@ -239,6 +290,13 @@ const Core = (() => {
   function hasMaterial(data){return !!(data.main||data.info||data.text.trim());}
   function openItem(item){activeItem=item;editDraft=clone(state.items[item.id]);editing=!hasMaterial(editDraft);renderItem();$('itemDialog').showModal();}
   $('closeDetail').onclick=()=>$('itemDialog').close();
+  const itemDialog=$('itemDialog');let detailBackdropDown=false;
+  const isDetailBackdrop=e=>e.target===itemDialog;
+  itemDialog.addEventListener('pointerdown',e=>{detailBackdropDown=isDetailBackdrop(e);});
+  itemDialog.addEventListener('pointercancel',()=>{detailBackdropDown=false;});
+  itemDialog.addEventListener('close',()=>{detailBackdropDown=false;});
+  itemDialog.addEventListener('click',e=>{const close=!editing&&detailBackdropDown&&isDetailBackdrop(e);detailBackdropDown=false;if(close)itemDialog.close();});
+
   function renderItem(){const item=activeItem,data=editing?editDraft:state.items[item.id];$('detailName').textContent=item.name;$('detailMeta').replaceChildren(rarityStars(item.rarity),document.createTextNode(`　獲得 ${state.items[item.id].count}/3回`));
     const root=$('detailBody');root.replaceChildren();
     if(!editing){const edit=document.createElement('button');edit.textContent='編集';edit.onclick=()=>{editDraft=clone(state.items[item.id]);editing=true;renderItem();};root.append(edit);if(item.category!=='spell'&&data.main){const im=document.createElement('img');im.className='detail-image';im.src=data.main;im.alt='メイン画像';root.append(im);}if(data.info){const im=document.createElement('img');im.className='detail-image';im.src=data.info;im.alt='情報画像';root.append(im);}if(data.text.trim()){const p=document.createElement('p');p.className='detail-text';p.textContent=data.text;root.append(p);}return;}
@@ -249,7 +307,20 @@ const Core = (() => {
     const actions=document.createElement('div');actions.className='actions';const save=document.createElement('button');save.textContent='保存';save.onclick=async()=>{state.items[item.id]=editDraft;await persist();editing=false;renderItem();toast('図鑑資料を保存しました');};const cancel=document.createElement('button');cancel.className='secondary';cancel.textContent='キャンセル';cancel.onclick=()=>{editDraft=clone(state.items[item.id]);editing=hasMaterial(editDraft)?false:true;renderItem();};actions.append(save,cancel);root.append(actions);
   }
   function searchLink(label,query,images){const a=document.createElement('a');a.textContent=label;a.target='_blank';a.rel='noopener';a.href=`https://www.google.com/search?q=${encodeURIComponent(query)}${images?'&tbm=isch':''}`;return a;}
-  function renderImageSlot(root,key,label,maxSide){const section=document.createElement('section');section.className='edit-slot';const title=document.createElement('strong');title.textContent=label;section.append(title);if(editDraft[key]){const img=document.createElement('img');img.src=editDraft[key];img.alt=label;section.append(img);}const row=document.createElement('div');row.className='slot-actions';const choose=document.createElement('label');choose.className='button secondary';choose.textContent='画像を選択';const input=document.createElement('input');input.type='file';input.accept='image/*';input.hidden=true;input.onchange=async()=>{if(input.files[0]){editDraft[key]=await compressImage(input.files[0],maxSide);renderItem();}};choose.append(input);row.append(choose);if(editDraft[key]){const remove=document.createElement('button');remove.className='secondary';remove.textContent='削除';remove.onclick=()=>{editDraft[key]=null;renderItem();};row.append(remove);}section.append(row);const paste=document.createElement('div');paste.className='paste-target';paste.contentEditable='true';paste.textContent='ここをタップして長押し →「ペースト」';paste.addEventListener('paste',async e=>{const file=[...(e.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'))?.getAsFile();e.preventDefault();if(file){editDraft[key]=await compressImage(file,maxSide);renderItem();}else toast('画像が含まれていません');});section.append(paste);root.append(section);}
+  function renderImageSlot(root,key,label,maxSide){
+    const section=document.createElement('section');section.className='edit-slot';const title=document.createElement('strong');title.textContent=label;section.append(title);
+    if(editDraft[key]){const img=document.createElement('img');img.src=editDraft[key];img.alt=label;section.append(img);}
+    const row=document.createElement('div');row.className='slot-actions detail-image-actions';
+    const choose=document.createElement('label');choose.className='button secondary';choose.textContent='画像を選択';
+    const input=document.createElement('input');input.type='file';input.accept='image/*';input.hidden=true;
+    input.onchange=async()=>{if(input.files[0]){editDraft[key]=await compressImage(input.files[0],maxSide);renderItem();}};
+    choose.append(input);row.append(choose);
+    const paste=document.createElement('div');paste.className='detail-image-paste secondary';paste.contentEditable='true';paste.textContent='画像を貼り付け';paste.setAttribute('role','textbox');paste.setAttribute('aria-label',`${label}を長押ししてペースト`);paste.title='長押ししてペースト';paste.spellcheck=false;
+    paste.addEventListener('paste',async e=>{const file=[...(e.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'))?.getAsFile();e.preventDefault();if(file){editDraft[key]=await compressImage(file,maxSide);renderItem();}else toast('画像が含まれていません');});
+    row.append(paste);
+    if(editDraft[key]){const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='削除';remove.onclick=()=>{editDraft[key]=null;renderItem();};row.append(remove);}
+    section.append(row);root.append(section);
+  }
   async function compressImage(file,maxSide){let image,release=()=>{};if(window.createImageBitmap){image=await createImageBitmap(file);release=()=>image.close?.();}else{const url=URL.createObjectURL(file);release=()=>URL.revokeObjectURL(url);image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=url;});}const scale=Math.min(1,maxSide/Math.max(image.width,image.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);release();const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.88));if(!blob)throw Error('画像を圧縮できませんでした');return await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});}
 
   $('backupOpen').onclick=()=>$('backupDialog').showModal();document.querySelectorAll('.close-dialog').forEach(b=>b.onclick=()=>b.closest('dialog').close());
