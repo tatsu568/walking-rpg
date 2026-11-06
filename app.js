@@ -1,5 +1,5 @@
 /* Walking RPG: local-first static PWA. */
-const APP_VERSION='v1.4.4';
+const APP_VERSION='v1.5.7';
 const Core = (() => {
   const catalog = [];
   const add = (category, rarityRows) => {
@@ -254,7 +254,7 @@ const Core = (() => {
 
   $('drawOne').onclick=()=>draw(1);$('drawTen').onclick=()=>draw(10);
   async function draw(amount){const actual=Math.min(amount,Core.available(state));if(!actual)return;const result=[];for(let i=0;i<actual;i++){const item=Core.pick(state,amount===10&&i===9);if(!item)break;const record=state.items[item.id],isNew=record.count===0;record.count++;result.push({item,isNew});}if(!result.length){toast('抽選対象がありません');return;}state.spent+=result.length;await persist();renderDraw(result);setScreen('gacha');}
-  function renderDraw(results){const root=$('drawResults');root.replaceChildren();results.forEach(({item,isNew})=>{const card=document.createElement('article');card.className='draw-card';if(item.rarity>=4)card.classList.add(`rarity-card-${item.rarity}`);const data=state.items[item.id];if(data.main){const img=document.createElement('img');img.src=data.main;img.alt=item.name;card.append(img);}else{const ph=document.createElement('div');ph.className='placeholder';ph.textContent=item.category==='spell'?'✦':'◇';card.append(ph);}const title=document.createElement('strong');title.textContent=item.name;card.append(title);const meta=document.createElement('small');meta.className='rarity-meta';meta.append(rarityStars(item.rarity),acquisitionCount(`${data.count}/3`));card.append(meta);if(isNew){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='NEW';card.append(badge);}root.append(card);});}
+  function renderDraw(results){const root=$('drawResults');root.replaceChildren();results.forEach(({item,isNew})=>{const card=document.createElement('article');card.className='draw-card';if(item.rarity>=4)card.classList.add(`rarity-card-${item.rarity}`);const data=state.items[item.id];if(data.main){const img=document.createElement('img');img.src=data.main;img.alt=item.name;card.append(img);}else{const ph=document.createElement('div');ph.className='placeholder';ph.textContent=item.category==='spell'?'✦':'◇';card.append(ph);}const title=document.createElement('strong');title.textContent=item.name;card.append(title);const meta=document.createElement('small');meta.className='rarity-meta';meta.append(rarityStars(item.rarity),acquisitionCount(String(data.count)));card.append(meta);if(isNew){const badge=document.createElement('span');badge.className='new-badge';badge.textContent='NEW';card.append(badge);}root.append(card);});}
 
   function acquisitionCount(text){const count=document.createElement('span');count.className='acquisition-count';count.textContent=text;return count;}
   function rarityStars(rarity){
@@ -277,10 +277,15 @@ const Core = (() => {
     items.forEach(item=>{
       if(item.groupHeading){const heading=document.createElement('h3');heading.className='collection-group-heading';heading.textContent={weapon:'武器',armor:'鎧',shield:'盾'}[item.groupHeading];root.append(heading);return;}
       const data=state.items[item.id],tile=document.createElement('button');tile.className=`item-tile ${data.count?'':'locked'}`;if(data.count&&item.rarity>=4)tile.classList.add(`rarity-card-${item.rarity}`);
-      if(data.count&&data.main){const img=document.createElement('img');img.src=data.main;img.alt='';tile.append(img);}
+      const spellImage=item.category==='spell'?'./spell-staff-b.png':'';
+      if(data.count&&(spellImage||data.main)){
+        const img=document.createElement('img');img.src=spellImage||data.main;img.alt='';
+        if(spellImage)img.className='spell-preview-image';
+        tile.append(img);
+      }
       else{const ph=document.createElement('div');ph.className='tile-empty';if(data.count)ph.textContent='◇';else ph.append(lockIcon());tile.append(ph);}
       const name=document.createElement('strong');name.textContent=data.count?item.name:'？？？';tile.append(name);
-      const meta=document.createElement('small');if(data.count){meta.className='rarity-meta';meta.append(rarityStars(item.rarity),acquisitionCount(`${data.count}/3`));}else meta.textContent='未獲得';tile.append(meta);
+      const meta=document.createElement('small');if(data.count){meta.className='rarity-meta';meta.append(rarityStars(item.rarity),acquisitionCount(String(data.count)));}else meta.textContent='未獲得';tile.append(meta);
       tile.onclick=()=>{if(!data.count){toast('ガチャで獲得すると詳細を開けます');return;}openItem(item);};root.append(tile);
     });
   }

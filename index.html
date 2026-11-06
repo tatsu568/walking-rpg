@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f4f6f8">
+  <meta name="theme-color" content="#f3e5c5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <title>WALK QUEST</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=1.5.7">
 </head>
 <body>
   <header class="top"><div><h1>WALK QUEST <span id="appVersion" class="app-version"></span></h1><p>歩いた分だけ、冒険の仲間を集めよう。</p></div><button id="backupOpen" class="icon-button" aria-label="バックアップと復元">⋯</button></header>
@@ -64,7 +64,7 @@
     </section>
 
     <section id="screen-gacha" class="screen">
-      <article class="card gacha-card"><p class="muted">共通ガチャ</p><strong id="gachaCount" class="big-number">0</strong><span>回分</span><div class="actions center"><button id="drawOne">1回引く</button><button id="drawTen" class="secondary">10連ガチャ</button></div><p id="gachaHint" class="muted"></p></article>
+      <article class="card gacha-card"><img class="gacha-chest" src="./WALK_QUEST_chest_C2.png" width="1362" height="1155" alt=""><p class="muted">共通ガチャ</p><strong id="gachaCount" class="big-number">0</strong><span>回分</span><div class="actions center"><button id="drawOne">1回引く</button><button id="drawTen" class="secondary">10連ガチャ</button></div><p id="gachaHint" class="muted"></p></article>
       <div id="drawResults" class="draw-grid"></div>
     </section>
 
@@ -80,7 +80,7 @@
   <dialog id="backupDialog"><div class="dialog-head"><h2>バックアップ・復元</h2><button class="icon-button close-dialog" aria-label="閉じる">×</button></div><p class="muted">歩行記録・ガチャ・図鑑資料と画像を含むJSONファイルです。端末外の安全な場所にも保管してください。</p><button id="exportBackup" class="full">JSONをダウンロード</button><label class="button secondary full file-button" for="restoreFile">バックアップから復元</label><input id="restoreFile" type="file" accept="application/json,.json"><p id="backupStatus" class="muted"></p></dialog>
   <div id="toast" role="status" aria-live="polite" class="toast hidden"></div>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="./app.js"></script>
+  <script src="./app.js?v=1.5.7"></script>
   <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));</script>
 </body>
 </html>

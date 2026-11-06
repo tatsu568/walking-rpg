@@ -34,3 +34,140 @@
 
 /* The full-screen dialog receives backdrop taps; only its panel scrolls. */
 #itemDialog{position:fixed;inset:0;width:100%;height:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border-radius:0;background:transparent;box-shadow:none;overflow:hidden}#itemDialog[open]{display:flex;align-items:center;justify-content:center}#itemDialog>.detail-panel{flex:none;width:min(94vw,560px);max-height:88vh;max-height:88dvh;min-width:0;overflow:auto;overscroll-behavior:contain;padding:18px;border-radius:18px;background:#fff;box-shadow:0 12px 50px #1115}
+
+/* WALK QUEST — classic adventure journal theme. Layout and rarity styles stay above. */
+:root{
+  --paper:#f3e5c5;--paper-light:#fff9eb;--paper-edge:#b99a60;
+  --ink:#3b3025;--ink-muted:#716047;--gold:#c9a357;--gold-light:#f5df9b;
+  --blue:#234b70;--blue-dark:#132f4c;--blue-light:#38678b;
+  color:var(--ink);background:var(--paper);color-scheme:light;
+}
+body{
+  background:radial-gradient(ellipse at 50% 0,#fff5db99,transparent 65%),
+    repeating-linear-gradient(0deg,#8e682107 0 1px,transparent 1px 5px),
+    linear-gradient(90deg,#e2cda4,var(--paper) 12%,var(--paper) 88%,#e2cda4);
+  min-height:100vh;
+}
+.top{gap:8px;padding-bottom:14px;border-bottom:1px solid #ac8c54}
+.top h1{font-family:Georgia,"Times New Roman",serif;font-weight:800;letter-spacing:.025em;color:#72501d;text-shadow:0 1px 0 #fff3be,0 2px 0 #d5b878}
+.top p{color:var(--ink-muted);line-height:1.5}
+.app-version{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;color:#77674e;text-shadow:none}
+.tabs{gap:7px;background:var(--paper);border-bottom:1px solid #bd9e66;margin-bottom:10px;padding-top:9px}
+button:not(.item-tile),.button{
+  color:#fff8e4;background:linear-gradient(180deg,var(--blue-light),var(--blue) 48%,var(--blue-dark));
+  border-radius:5px;box-shadow:inset 0 0 0 1px var(--gold),inset 0 2px 0 #ffffff26,0 2px 0 #846632;
+  text-shadow:0 1px 1px #0b233c66;
+}
+button:not(.item-tile):active,.button:active{box-shadow:inset 0 0 0 1px var(--gold),inset 0 2px 4px #0b233c66}
+button:disabled{opacity:.5}
+button:focus-visible,.button:focus-within,a:focus-visible,summary:focus-visible{
+  outline:2px solid #94691f;outline-offset:3px;
+}
+button.secondary,.button.secondary,.search-links a{
+  color:var(--blue-dark);background:linear-gradient(#fff9e9,#ead9b5);
+  box-shadow:inset 0 0 0 1px #b5965b,inset 0 2px 0 #ffffff99,0 1px 0 #bd9b62;text-shadow:none;
+}
+.tabs button,.segmented button{
+  color:#665032;background:linear-gradient(#fff6df,#e5d2a9);border-radius:5px;
+  box-shadow:inset 0 0 0 1px #ae8f56,inset 0 2px 0 #ffffff66,0 1px 0 #b69a67;text-shadow:none;
+}
+.tabs button.active,.segmented button.selected{
+  color:var(--gold-light);background:linear-gradient(var(--blue-light),var(--blue-dark));
+  box-shadow:inset 0 0 0 1px #d7b76c,inset 0 0 0 3px #ffffff12,0 2px 0 #8d6b33;
+}
+button.icon-button{color:#72521f;background:#f5e8c9;text-shadow:none;box-shadow:inset 0 0 0 1px #b5965b,0 1px 0 #bd9b62}
+.summary,.card,#backupDialog,#itemDialog>.detail-panel{
+  background:linear-gradient(135deg,#fffbef,#f6eacd);
+  border-color:var(--paper-edge);border-radius:6px;
+  box-shadow:inset 0 0 0 3px #fff8e6,inset 0 0 0 4px #d7bd89,0 3px 8px #5b3d1614;
+}
+h2{color:#61461e;line-height:1.5}
+h2::before{content:'◆';color:#a4823b;font-size:.7em;margin-right:7px;vertical-align:middle}
+.card>h2{padding-bottom:8px;border-bottom:1px solid #cbb17b}
+.section-title{padding-bottom:8px;border-bottom:1px solid #cbb17b}
+.summary span,.summary-total-row span,.muted,label,.top p,.import-hint{color:var(--ink-muted)}
+.gacha-available>span,.gacha-available small,.summary-total-row strong,.collection-summary strong{color:var(--blue-dark)}
+.summary-total-row+ .summary-total-row{border-color:#d5bd8e}
+.summary-note{color:#6d593d}
+.import-column{background:#fff8e7;border-color:#c6aa74;border-radius:4px;box-shadow:inset 0 0 0 2px #f1e2c2}
+.import-column h3{color:#684d25}
+.import-paste,.detail-image-paste{color:var(--blue-dark);background:linear-gradient(#edf2ef,#dbe5e5);border-color:#a58c59;border-radius:5px;box-shadow:inset 0 1px 0 #fff}
+.import-paste:focus,.detail-image-paste:focus{outline-color:var(--blue)}
+.import-files summary{color:#765b30}
+input[type=date],input[type=number],textarea{
+  color:var(--ink);background:#fffdf5;border-color:#b69d71;border-radius:4px;box-shadow:inset 0 1px 3px #80643714;
+}
+input:focus,textarea:focus{outline:2px solid #547997;outline-offset:1px}
+input[type=checkbox],progress{accent-color:var(--blue)}
+.candidate,.saved-entry,.record-row,.edit-slot{border-color:#d7c49e}
+.saved-subheading,.walk-date-heading,.collection-group-heading{color:#6b512b}
+.saved-subheading{letter-spacing:.03em}
+.collection-group-heading{border-color:#bda16b}
+.month-navigation strong{color:#624923}
+.saved-edit-field{color:#6d593d}
+.candidate-footer{background:#faf0d9;border-top:1px solid #bfa16b;z-index:2;box-shadow:0 -4px 8px #7853260a}
+.duplicate{color:#8c571b}
+.status-line{color:#3d6749}
+pre{color:#5a4d39;background:#eee1c6;border:1px solid #d3bc90;border-radius:4px}
+.error{color:#97392a;background:#fff0e4;border:1px solid #d9b09b}
+.empty{color:#78684c}
+.gacha-card{background:radial-gradient(ellipse at 50% 15%,#fff7d5,#f5e8c8 70%);border-color:#ae8b45}
+.big-number{color:#79541b;text-shadow:0 1px 0 #fff2bf;font-variant-numeric:tabular-nums}
+.gacha-card>p:first-of-type{color:#795d2d;letter-spacing:.1em}
+.draw-card,.item-tile{
+  background:linear-gradient(145deg,#fffdf6,#f5e9ce);border-color:#baa06b;border-radius:5px;
+  box-shadow:inset 0 0 0 2px #fff8e8;color:var(--ink);text-shadow:none;
+}
+.item-tile:not(.locked) strong{color:var(--ink)}
+.item-tile small,.acquisition-count{color:#756348}
+.item-tile.locked{background:linear-gradient(#efe5d0,#e8dcc2);color:#877a60;box-shadow:inset 0 0 0 2px #f4ebd9}
+.item-tile.locked strong,.item-tile.locked small{color:#83765e}
+.tile-empty,.draw-card .placeholder{color:#9b8b6d}
+.new-badge{color:#fff6d5;background:#946124;border:1px solid #d6b461;border-radius:3px;text-shadow:none}
+.ownership-filter>.muted{letter-spacing:.06em;color:#765b30}
+.dialog-head{border-bottom:1px solid #c8ad76;padding-bottom:10px;margin-bottom:10px}
+dialog::backdrop{background:#201c16b8}
+#itemDialog{background:transparent;box-shadow:none}
+#itemDialog>.detail-panel{border-radius:6px}
+.detail-text{color:var(--ink);line-height:1.7}
+.search-links a{border-radius:4px}
+.toast{color:#fff3d4;background:#203d57;border:1px solid #c9a357;border-radius:5px;box-shadow:0 3px 12px #211d1955}
+@media(max-width:359px){.top h1{font-size:1.3rem;letter-spacing:0}.tabs{gap:5px}.categories button{padding-inline:7px}}
+
+.gacha-card .center button{min-width:0;flex:1 1 0;max-width:180px;padding-inline:8px}
+
+/* High-rarity card surfaces and shared metallic stars. */
+.item-tile.rarity-card-4:not(.locked),.draw-card.rarity-card-4{
+  background:linear-gradient(145deg,#f5faff,#e1ebf6);
+  border-color:#718ba6;outline:1px solid #718ba6;outline-offset:-2px;
+  box-shadow:inset 0 0 0 2px #f7fbff;
+}
+.item-tile.rarity-card-5:not(.locked),.draw-card.rarity-card-5{
+  background:linear-gradient(145deg,#ebf5fc,#c3d9ec);
+  background-image:radial-gradient(circle at 50% 36%,#fffbed99,transparent 65%),
+    repeating-conic-gradient(from 8deg at 50% 36%,#fffdf04d 0deg 12deg,transparent 12deg 24deg),
+    linear-gradient(145deg,#ebf5fc,#c3d9ec);
+  position:relative;border-color:#704008;outline:1px solid #ffd36a;outline-offset:-2px;
+  box-shadow:inset 0 0 0 3px #fff0a4,inset 0 0 0 4px #ae7118;color:#50391b;
+}
+/* The transparent center and edges of the sprite leave only the four ornaments. */
+.draw-card.rarity-card-5{overflow:visible}
+:is(.item-tile.rarity-card-5:not(.locked),.draw-card.rarity-card-5)::before{
+  content:'';position:absolute;inset:-2px -2.5px;z-index:1;pointer-events:none;
+  border:24px solid transparent;
+  border-image:url("./rare5-gold-corners.png?v=1.5.5") 128 / 24px stretch;
+  image-rendering:pixelated;
+}
+.item-tile.rarity-card-5:not(.locked) strong,.draw-card.rarity-card-5 strong{color:#50391b}
+.item-tile.rarity-card-5:not(.locked) small,.item-tile.rarity-card-5:not(.locked) .acquisition-count,.draw-card.rarity-card-5 .acquisition-count{color:#735227}
+.item-tile.rarity-card-5:not(.locked) .tile-empty,.draw-card.rarity-card-5 .placeholder{color:#b18a43}
+.rarity-stars.rarity-4{--rarity-color:#98abc1;-webkit-text-stroke:.65px #405977}
+.rarity-stars.rarity-5{--rarity-color:#e3b126;-webkit-text-stroke:.65px #7c4c0e}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .rarity-stars.rarity-4{background-image:linear-gradient(185deg,#7188a4 8%,#b9cee3 30%,#f1f8ff 42%,#cfdfef 53%,#7d94af 74%,#b2c6db 92%)}
+  .rarity-stars.rarity-5{background-image:linear-gradient(185deg,#ab7519 8%,#f2c447 30%,#fff7bf 40%,#ffe577 54%,#bb841d 74%,#edb734 92%)}
+}
+
+.gacha-chest{display:block;width:112px;max-width:48%;height:auto;margin:0 auto 8px;image-rendering:pixelated}
+
+.item-tile .spell-preview-image{padding:4px;image-rendering:pixelated}
