@@ -1,5 +1,5 @@
 /* Walking RPG: local-first static PWA. */
-const APP_VERSION='v1.5.7';
+const APP_VERSION='v1.6.1';
 const Core = (() => {
   const catalog = [];
   const add = (category, rarityRows) => {
@@ -28,14 +28,58 @@ const Core = (() => {
   add('spell', [[1,['ホイミ','ギラ','ラリホー','レミーラ']],[2,['マホトーン','リレミト']],[3,['ルーラ','トヘロス']],[4,['ベホイミ']],[5,['ベギラマ']]]);
   const byId = Object.fromEntries(catalog.map(item => [item.id,item]));
   const legacyIds=catalog.filter(item=>!addedEquipmentIds.includes(item.id)).map(item=>item.id);
-  const newState = () => ({ version:1, daily:[], walks:[], earnedSteps:0, earnedDistance:0, spent:0, items:Object.fromEntries(catalog.map(i=>[i.id,{count:0,main:null,info:null,text:''}])) });
+  const newState = () => ({ version:1, daily:[], walks:[], strength:[], earnedSteps:0, earnedDistance:0, earnedSquats:0, earnedPlank:0, spent:0, items:Object.fromEntries(catalog.map(i=>[i.id,{count:0,main:null,info:null,text:''}])) });
   const totalSteps = s => s.daily.reduce((a,r)=>a+(Number(r.steps)||0),0);
   const totalDistance = s => s.walks.reduce((a,r)=>a+(Number(r.distance)||0),0);
+  const validDate=value=>{
+    if(typeof value!=='string')return false;
+    const match=value.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!match)return false;
+    const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
+    if(month<1||month>12)return false;
+    const leap=year%4===0&&(year%100!==0||year%400===0);
+    const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+    return day>=1&&day<=days[month-1];
+  };
+  function strengthTotals(rows) {
+    return rows.reduce((total,row)=>{
+      total.squats+=row.squats;
+      total.plankSeconds+=row.plankSeconds;
+      return total;
+    },{squats:0,plankSeconds:0});
+  }
+  function validateStrength(rows) {
+    if(!Array.isArray(rows))throw Error('筋トレ記録の形式が不正です。');
+    const dates=new Set();
+    for(const row of rows){
+      if(!row||!validDate(row.date)||dates.has(row.date)||
+         !Number.isSafeInteger(row.squats)||row.squats<0||
+         !Number.isSafeInteger(row.plankSeconds)||row.plankSeconds<0){
+        throw Error('日付と、0以上の整数の回数・秒数を確認してください。');
+      }
+      dates.add(row.date);
+    }
+    const totals=strengthTotals(rows);
+    if(!Number.isSafeInteger(totals.squats)||!Number.isSafeInteger(totals.plankSeconds)){
+      throw Error('筋トレの累計が保存できる範囲を超えています。');
+    }
+    return totals;
+  }
+  function setStrength(s,row) {
+    const rows=s.strength.filter(other=>other.date!==row.date);
+    rows.push(row);
+    validateStrength(rows);
+    s.strength=rows;
+    award(s);
+  }
   function award(s) {
     s.earnedSteps = Math.max(s.earnedSteps, Math.floor(totalSteps(s)/1000));
     s.earnedDistance = Math.max(s.earnedDistance, Math.floor(totalDistance(s))*2);
+    const totals=strengthTotals(s.strength);
+    s.earnedSquats=Math.max(s.earnedSquats,Math.floor(totals.squats/10));
+    s.earnedPlank=Math.max(s.earnedPlank,Math.floor(totals.plankSeconds/60));
   }
-  const available = s => Math.max(0,s.earnedSteps+s.earnedDistance-s.spent);
+  const earnedTotal = s => s.earnedSteps+s.earnedDistance+s.earnedSquats+s.earnedPlank;
+  const available = s => Math.max(0,earnedTotal(s)-s.spent);
   function pick(s, boosted=false, rng=Math.random) {
     const weights = boosted ? [6,5,4,5,4] : [6,5,4,3,2];
     const eligible = catalog.filter(i=>s.items[i.id].count<3);
@@ -51,15 +95,6 @@ const Core = (() => {
     const knownIds=new Set(catalog.map(item=>item.id)), itemIds=Object.keys(s.items);
     if(itemIds.some(id=>!knownIds.has(id))||legacyIds.some(id=>!Object.hasOwn(s.items,id)))throw Error('図鑑データ件数が一致しません。');
     for(const id of addedEquipmentIds)if(!Object.hasOwn(s.items,id))s.items[id]={count:0,main:null,info:null,text:''};
-    const validDate=value=>{
-      if(typeof value!=='string')return false;
-      const match=value.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!match)return false;
-      const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
-      if(month<1||month>12)return false;
-      const leap=year%4===0&&(year%100!==0||year%400===0);
-      const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
-      return day>=1&&day<=days[month-1];
-    };
     const dailyDates=new Set();for (const row of s.daily){
       if(!validDate(row.date))throw Error(`日次記録の日付形式が不正です（${String(row.date)}）。`);
       if(!Number.isInteger(row.steps)||row.steps<0)throw Error(`日次記録の歩数が不正です（${row.date}）。`);
@@ -67,9 +102,18 @@ const Core = (() => {
       dailyDates.add(row.date);
     }
     const walkIds=new Set();for (const row of s.walks){if(typeof row.id!=='string'||!row.id||!validDate(row.date)||!Number.isFinite(row.distance)||row.distance<0||walkIds.has(row.id))throw Error('散歩記録に不正または重複したID・日付・距離があります。');walkIds.add(row.id);}
+    const strengthKeys=['strength','earnedSquats','earnedPlank'];
+    if(strengthKeys.every(key=>!Object.hasOwn(s,key))){
+      s.strength=[];s.earnedSquats=0;s.earnedPlank=0;
+    }
+    const strength=validateStrength(s.strength);
+    if(!Number.isSafeInteger(s.earnedSquats)||s.earnedSquats<Math.floor(strength.squats/10)||
+       !Number.isSafeInteger(s.earnedPlank)||s.earnedPlank<Math.floor(strength.plankSeconds/60)){
+      throw Error('筋トレ報酬の状態が記録と整合しません。');
+    }
     for (const key of ['earnedSteps','earnedDistance','spent']) if (!Number.isInteger(s[key]) || s[key]<0) throw Error('ガチャ状態の値が不正です。');
     // Accept legacy 1-per-km counters; award runs only after full validation, before saving.
-    if(s.spent>s.earnedSteps+s.earnedDistance||s.earnedSteps<Math.floor(totalSteps(s)/1000)||s.earnedDistance<Math.floor(totalDistance(s)))throw Error('ガチャ回数の状態が記録と整合しません。');
+    if(s.spent>earnedTotal(s)||s.earnedSteps<Math.floor(totalSteps(s)/1000)||s.earnedDistance<Math.floor(totalDistance(s)))throw Error('ガチャ回数の状態が記録と整合しません。');
     if (Object.keys(s.items).length!==catalog.length) throw Error('図鑑データ件数が一致しません。');
     for (const item of catalog) {
       const v=s.items[item.id];
@@ -103,7 +147,7 @@ const Core = (() => {
     }
     return out;
   }
-  return {catalog,byId,newState,totalSteps,totalDistance,award,available,pick,validate,parseDaily,parseWalks};
+  return {catalog,byId,newState,totalSteps,totalDistance,strengthTotals,setStrength,award,available,pick,validate,parseDaily,parseWalks};
 })();
 
 (() => {
@@ -126,11 +170,70 @@ const Core = (() => {
     $('availableCount').textContent=Core.available(state);$('gachaCount').textContent=Core.available(state);
     $('stepProgress').textContent=`${steps.toLocaleString()}歩`;
     $('walkProgress').textContent=`${dist.toFixed(2)}km`;
+    const totals=Core.strengthTotals(state.strength);
+    $('squatProgress').textContent=`${totals.squats.toLocaleString()}回`;
+    $('plankProgress').textContent=`${totals.plankSeconds.toLocaleString()}秒`;
     $('drawOne').disabled=Core.available(state)<1||!state.items||!Core.catalog.some(i=>state.items[i.id].count<3);
     $('drawTen').disabled=Core.available(state)<10||!Core.catalog.some(i=>state.items[i.id].count<3);
     $('gachaHint').textContent=Core.catalog.every(i=>state.items[i.id].count>=3)?'すべてのアイテムが3回獲得済みです。ガチャ回数は保持されます。':'';
-    renderSaved();renderCollection();
+    renderSaved();renderStrength();renderCollection();
   }
+  function loadStrengthDate(date){
+    const row=state?.strength.find(entry=>entry.date===date);
+    $('strengthDate').value=date;
+    $('squatCount').value=row?.squats??0;
+    $('plankSeconds').value=row?.plankSeconds??0;
+  }
+  function renderStrength(){
+    const root=$('strengthRecords');
+    root.replaceChildren();
+    if(!state.strength.length){
+      const empty=document.createElement('p');
+      empty.className='empty';empty.textContent='筋トレ記録はありません';root.append(empty);
+      return;
+    }
+    const table=document.createElement('table');
+    table.className='record-table';
+    table.innerHTML='<thead><tr><th scope="col">日付</th><th scope="col">スクワット</th><th scope="col">プランク</th><th scope="col" aria-label="編集"></th></tr></thead>';
+    const body=document.createElement('tbody');
+    for(const row of [...state.strength].sort((a,b)=>b.date.localeCompare(a.date))){
+      const entry=document.createElement('tr');
+      for(const value of [formatSavedDate(row.date),`${row.squats.toLocaleString()}回`,`${row.plankSeconds.toLocaleString()}秒`]){
+        const cell=document.createElement('td');
+        cell.textContent=value;
+        entry.append(cell);
+      }
+      const action=document.createElement('td');
+      const edit=document.createElement('button');
+      edit.type='button';edit.className='secondary small-button saved-edit-icon';edit.textContent='✎';edit.title='編集';
+      edit.setAttribute('aria-label',`${formatSavedDate(row.date)}の筋トレ記録を編集`);
+      edit.onclick=()=>{loadStrengthDate(row.date);$('squatCount').focus();};
+      action.append(edit);entry.append(action);body.append(entry);
+    }
+    table.append(body);root.append(table);
+  }
+  $('strengthDate').value=todayISO();
+  $('strengthDate').onchange=()=>loadStrengthDate($('strengthDate').value);
+  $('strengthForm').onsubmit=async e=>{
+    e.preventDefault();
+    const save=$('saveStrength');
+    if(!state||save.disabled)return;
+    const date=$('strengthDate').value,squats=$('squatCount').value,plank=$('plankSeconds').value;
+    if(squats===''||plank===''){toast('回数と秒数を入力してください');return;}
+    const next={...state};
+    try{Core.setStrength(next,{date,squats:Number(squats),plankSeconds:Number(plank)});}
+    catch(error){toast(error.message);return;}
+    // Keep other save actions from replacing the snapshot during this write.
+    save.disabled=true;
+    document.body.inert=true;
+    try{
+      await dbWrite(next);
+      state=next;
+      render();
+      toast('筋トレ記録を保存しました');
+    }catch(error){toast(`保存できませんでした：${error.message}`);}
+    finally{document.body.inert=false;save.disabled=false;}
+  };
   function renderSaved(){
     const root=$('savedRecords');root.replaceChildren();
     const year=shownMonth.getFullYear(),month=shownMonth.getMonth()+1;
@@ -139,12 +242,19 @@ const Core = (() => {
     const isFuture=year>now.getFullYear()||(year===now.getFullYear()&&month>now.getMonth()+1);
     $('savedNextMonth').disabled=isCurrent||isFuture;
     const monthKey=`${year}-${String(month).padStart(2,'0')}`;
-    const daily=state.daily.filter(row=>row.date.startsWith(monthKey)).sort((a,b)=>b.date.localeCompare(a.date));
-    const walks=state.walks.map((row,index)=>({row,index})).filter(x=>x.row.date.startsWith(monthKey)).sort((a,b)=>b.row.date.localeCompare(a.row.date)||a.index-b.index);
-    if(!daily.length&&!walks.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='この月の記録はありません';root.append(empty);return;}
+    const rows=[
+      ...state.daily.map(row=>({row,type:'daily'})),
+      ...state.walks.map(row=>({row,type:'walk'}))
+    ].filter(({row})=>row.date.startsWith(monthKey))
+      .sort((a,b)=>b.row.date.localeCompare(a.row.date));
+    if(!rows.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='この月の記録はありません';root.append(empty);return;}
 
-    if(daily.length){const dailyTitle=document.createElement('h3');dailyTitle.className='saved-subheading';dailyTitle.textContent='日次歩数';root.append(dailyTitle);daily.forEach(row=>root.append(renderDailyRow(row)));}
-    if(walks.length){const walksTitle=document.createElement('h3');walksTitle.className='saved-subheading';walksTitle.textContent='散歩記録';root.append(walksTitle);let lastDate='';walks.forEach(({row})=>{if(row.date!==lastDate){lastDate=row.date;const heading=document.createElement('h4');heading.className='walk-date-heading';heading.textContent=formatSavedDate(row.date);root.append(heading);}root.append(renderWalkRow(row));});}
+    const table=document.createElement('table');
+    table.className='record-table';
+    table.innerHTML='<thead><tr><th scope="col">日付</th><th scope="col">日次歩数</th><th scope="col">散歩距離</th><th scope="col" aria-label="編集"></th></tr></thead>';
+    const body=document.createElement('tbody');
+    for(const {row,type} of rows)body.append(renderSavedRow(row,type));
+    table.append(body);root.append(table);
   }
   function formatSavedDate(date){return date.replaceAll('-','/');}
   function savedEditForm(row,type){
@@ -166,15 +276,26 @@ const Core = (() => {
     const cancel=document.createElement('button');cancel.className='secondary small-button';cancel.textContent='キャンセル';cancel.onclick=()=>{editingSaved=null;renderSaved();};
     actions.append(save,cancel);form.append(actions);return form;
   }
-  function renderDailyRow(row){
-    const wrap=document.createElement('div');wrap.className='saved-entry';
-    if(editingSaved?.row===row&&editingSaved.type==='daily'){wrap.append(savedEditForm(row,'daily'));return wrap;}
-    const line=document.createElement('div');line.className='saved-compact-row';const summary=document.createElement('span');summary.textContent=`${formatSavedDate(row.date)}　${row.steps.toLocaleString()}歩`;const edit=document.createElement('button');edit.type='button';edit.className='secondary small-button saved-edit-icon';edit.textContent='✎';edit.setAttribute('aria-label',`日次記録 ${formatSavedDate(row.date)} ${row.steps.toLocaleString()}歩を編集`);edit.title='編集';edit.onclick=()=>{editingSaved={type:'daily',row};renderSaved();};line.append(summary,edit);wrap.append(line);return wrap;
-  }
-  function renderWalkRow(row){
-    const wrap=document.createElement('div');wrap.className='saved-entry walk-entry';
-    if(editingSaved?.row===row&&editingSaved.type==='walk'){wrap.append(savedEditForm(row,'walk'));return wrap;}
-    const line=document.createElement('div');line.className='saved-compact-row';const summary=document.createElement('span');summary.textContent=`${Number(row.distance).toFixed(2)}km`;const edit=document.createElement('button');edit.type='button';edit.className='secondary small-button saved-edit-icon';edit.textContent='✎';edit.setAttribute('aria-label',`散歩記録 ${formatSavedDate(row.date)} ${Number(row.distance).toFixed(2)}kmを編集`);edit.title='編集';edit.onclick=()=>{editingSaved={type:'walk',row};renderSaved();};line.append(summary,edit);wrap.append(line);return wrap;
+  function renderSavedRow(row,type){
+    const entry=document.createElement('tr');
+    if(editingSaved?.row===row&&editingSaved.type===type){
+      const cell=document.createElement('td');
+      cell.colSpan=4;cell.className='record-table-editor';
+      cell.append(savedEditForm(row,type));entry.append(cell);
+      return entry;
+    }
+    const daily=type==='daily',date=formatSavedDate(row.date);
+    const value=daily?`${row.steps.toLocaleString()}歩`:`${Number(row.distance).toFixed(2)}km`;
+    for(const text of [date,daily?value:'—',daily?'—':value]){
+      const cell=document.createElement('td');
+      cell.textContent=text;entry.append(cell);
+    }
+    const action=document.createElement('td'),edit=document.createElement('button');
+    edit.type='button';edit.className='secondary small-button saved-edit-icon';edit.textContent='✎';edit.title='編集';
+    edit.setAttribute('aria-label',`${date}の${daily?'日次歩数':'散歩距離'} ${value}を編集`);
+    edit.onclick=()=>{editingSaved={type,row};renderSaved();};
+    action.append(edit);entry.append(action);
+    return entry;
   }
   function moveSavedMonth(amount){editingSaved=null;shownMonth=new Date(shownMonth.getFullYear(),shownMonth.getMonth()+amount,1);renderSaved();}
   $('savedPrevMonth').onclick=()=>moveSavedMonth(-1);$('savedNextMonth').onclick=()=>{const now=new Date();if(shownMonth.getFullYear()<now.getFullYear()||(shownMonth.getFullYear()===now.getFullYear()&&shownMonth.getMonth()<now.getMonth()))moveSavedMonth(1);};
@@ -304,7 +425,7 @@ const Core = (() => {
 
   function renderItem(){const item=activeItem,data=editing?editDraft:state.items[item.id];$('detailName').textContent=item.name;$('detailMeta').replaceChildren(rarityStars(item.rarity),document.createTextNode(`　獲得 ${state.items[item.id].count}/3回`));
     const root=$('detailBody');root.replaceChildren();
-    if(!editing){const edit=document.createElement('button');edit.textContent='編集';edit.onclick=()=>{editDraft=clone(state.items[item.id]);editing=true;renderItem();};root.append(edit);if(item.category!=='spell'&&data.main){const im=document.createElement('img');im.className='detail-image';im.src=data.main;im.alt='メイン画像';root.append(im);}if(data.info){const im=document.createElement('img');im.className='detail-image';im.src=data.info;im.alt='情報画像';root.append(im);}if(data.text.trim()){const p=document.createElement('p');p.className='detail-text';p.textContent=data.text;root.append(p);}return;}
+    if(!editing){const edit=document.createElement('button');edit.className='detail-edit-button';edit.textContent='編集';edit.onclick=()=>{editDraft=clone(state.items[item.id]);editing=true;renderItem();};root.append(edit);if(item.category!=='spell'&&data.main){const im=document.createElement('img');im.className='detail-image';im.src=data.main;im.alt='メイン画像';root.append(im);}if(data.info){const im=document.createElement('img');im.className='detail-image';im.src=data.info;im.alt='情報画像';root.append(im);}if(data.text.trim()){const p=document.createElement('p');p.className='detail-text';p.textContent=data.text;root.append(p);}return;}
     if(item.category!=='spell')renderImageSlot(root,'main','メイン画像',512);
     renderImageSlot(root,'info','情報画像',1600);
     const textSlot=document.createElement('section');textSlot.className='edit-slot';const label=document.createElement('label');label.textContent='情報テキスト';const textarea=document.createElement('textarea');textarea.className='edit-text';textarea.value=editDraft.text;textarea.placeholder='紹介文や自分用のメモ';textarea.oninput=()=>editDraft.text=textarea.value;textSlot.append(label,textarea);root.append(textSlot);
@@ -330,7 +451,7 @@ const Core = (() => {
 
   $('backupOpen').onclick=()=>$('backupDialog').showModal();document.querySelectorAll('.close-dialog').forEach(b=>b.onclick=()=>b.closest('dialog').close());
   $('exportBackup').onclick=()=>{const payload={app:'walking-rpg',version:1,exportedAt:new Date().toISOString(),data:state};const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;const date=new Date();const stamp=`${String(date.getFullYear()).slice(-2)}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;a.download=`WRPG_BKUP_${stamp}.json`;a.click();URL.revokeObjectURL(url);$('backupStatus').textContent='バックアップをダウンロードしました。';};
-  $('restoreFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='walking-rpg'||payload.version!==1)throw Error('対応していないバックアップです');const next=Core.validate(clone(payload.data));if(!confirm('現在の記録・ガチャ・図鑑資料をすべてバックアップの内容で上書きします。復元しますか？'))return;Core.award(next);await dbWrite(next);state=next;render();$('backupStatus').textContent='復元しました。';toast('バックアップを復元しました');}catch(err){$('backupStatus').textContent=`復元しませんでした：${err.message}`;toast(`復元できません：${err.message}`);}finally{e.target.value='';}};
+  $('restoreFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());if(payload.app!=='walking-rpg'||payload.version!==1)throw Error('対応していないバックアップです');const next=Core.validate(clone(payload.data));if(!confirm('現在の記録・ガチャ・図鑑資料をすべてバックアップの内容で上書きします。復元しますか？'))return;Core.award(next);await dbWrite(next);state=next;loadStrengthDate($('strengthDate').value);render();$('backupStatus').textContent='復元しました。';toast('バックアップを復元しました');}catch(err){$('backupStatus').textContent=`復元しませんでした：${err.message}`;toast(`復元できません：${err.message}`);}finally{e.target.value='';}};
 
-  (async()=>{try{db=await openDB();state=Core.validate(await dbRead());rewardUpdate();await dbWrite(state);render();}catch(e){toast(`起動または保存に失敗しました：${e.message}`);}})();
+  (async()=>{try{db=await openDB();state=Core.validate(await dbRead());rewardUpdate();await dbWrite(state);loadStrengthDate($('strengthDate').value);render();}catch(e){toast(`起動または保存に失敗しました：${e.message}`);}})();
 })();

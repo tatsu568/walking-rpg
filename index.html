@@ -10,7 +10,7 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <title>WALK QUEST</title>
-  <link rel="stylesheet" href="./styles.css?v=1.5.7">
+  <link rel="stylesheet" href="./styles.css?v=1.6.1-5">
 </head>
 <body>
   <header class="top"><div><h1>WALK QUEST <span id="appVersion" class="app-version"></span></h1><p>歩いた分だけ、冒険の仲間を集めよう。</p></div><button id="backupOpen" class="icon-button" aria-label="バックアップと復元">⋯</button></header>
@@ -20,9 +20,15 @@
     <section id="screen-records" class="screen active">
       <div class="summary-grid">
         <article class="summary summary-gacha"><span>ガチャ</span><strong class="gacha-available"><span id="availableCount">0</span><small>回</small></strong></article>
-        <article class="summary summary-totals"><div class="summary-total-row"><span>累計歩数</span><strong id="stepProgress">0歩</strong></div><div class="summary-total-row"><span>累計散歩距離</span><strong id="walkProgress">0.00km</strong></div></article>
+        <article class="summary summary-totals" aria-labelledby="summaryTotalsHeading">
+          <h3 id="summaryTotalsHeading" class="summary-total-heading">累計</h3>
+          <div class="summary-total-row"><span>歩数</span><strong id="stepProgress">0歩</strong></div>
+          <div class="summary-total-row"><span>スクワット</span><strong id="squatProgress">0回</strong></div>
+          <div class="summary-total-row"><span>距離</span><strong id="walkProgress">0.00km</strong></div>
+          <div class="summary-total-row"><span>プランク</span><strong id="plankProgress">0秒</strong></div>
+        </article>
       </div>
-      <p class="summary-note">1,000歩ごとに1回・散歩1kmごとに2回、ガチャを獲得。</p>
+      <p class="summary-note">ガチャ獲得条件：1,000歩ごと・スクワット10回ごと・プランク60秒ごとに1回、散歩1kmごとに2回</p>
       <article class="card">
         <h2>歩行記録を取り込む</h2>
         <div class="import-columns">
@@ -56,6 +62,23 @@
         <div id="walkResult" class="hidden"><p class="muted">日付・距離を確認してください。同じ日付と距離の保存済み候補は初期状態で未選択です。</p><div id="walkCandidates"></div><div class="candidate-footer"><strong>今回追加する距離：<span id="selectedDistance">0.00</span>km</strong><button id="saveWalks" class="full">選択した散歩を追加</button></div></div>
         <details><summary>OCR生テキスト</summary><pre id="ocrText"></pre></details>
       </article>
+      <article class="card">
+        <h2>筋トレ記録</h2>
+        <p class="muted">各日の合計を入力してください。</p>
+        <form id="strengthForm">
+          <label class="saved-edit-field" for="strengthDate">日付</label>
+          <div class="saved-edit-control"><input id="strengthDate" type="date" required></div>
+          <div class="strength-values">
+            <label class="saved-edit-field">スクワット（回）<input id="squatCount" type="number" min="0" step="1" inputmode="numeric" value="0" required></label>
+            <label class="saved-edit-field">プランク（秒）<input id="plankSeconds" type="number" min="0" step="1" inputmode="numeric" value="0" required></label>
+          </div>
+          <button id="saveStrength" class="full" type="submit">この日の合計を保存</button>
+        </form>
+        <details class="strength-history">
+          <summary>保存済みの筋トレ記録</summary>
+          <div id="strengthRecords"></div>
+        </details>
+      </article>
       <article class="card saved-card"><div class="section-title"><h2>保存済み記録</h2></div>
         <div class="month-navigation"><button id="savedPrevMonth" class="secondary">前月</button><strong id="savedMonthLabel"></strong><button id="savedNextMonth" class="secondary">次月</button></div>
         <button id="savedThisMonth" class="secondary this-month-button">今月</button>
@@ -80,7 +103,7 @@
   <dialog id="backupDialog"><div class="dialog-head"><h2>バックアップ・復元</h2><button class="icon-button close-dialog" aria-label="閉じる">×</button></div><p class="muted">歩行記録・ガチャ・図鑑資料と画像を含むJSONファイルです。端末外の安全な場所にも保管してください。</p><button id="exportBackup" class="full">JSONをダウンロード</button><label class="button secondary full file-button" for="restoreFile">バックアップから復元</label><input id="restoreFile" type="file" accept="application/json,.json"><p id="backupStatus" class="muted"></p></dialog>
   <div id="toast" role="status" aria-live="polite" class="toast hidden"></div>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="./app.js?v=1.5.7"></script>
+  <script src="./app.js?v=1.6.1-5"></script>
   <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));</script>
 </body>
 </html>
