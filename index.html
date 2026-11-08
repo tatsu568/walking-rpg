@@ -10,12 +10,12 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <title>WALK QUEST</title>
-  <link rel="stylesheet" href="./styles.css?v=1.6.1-5">
+  <link rel="stylesheet" href="./styles.css?v=1.6.17-2">
 </head>
 <body>
-  <header class="top"><div><h1>WALK QUEST <span id="appVersion" class="app-version"></span></h1><p>歩いた分だけ、冒険の仲間を集めよう。</p></div><button id="backupOpen" class="icon-button" aria-label="バックアップと復元">⋯</button></header>
+  <header class="top"><div><h1><span class="title-line">WALK QUEST <span id="appVersion" class="app-version"></span></span></h1><p>歩いた分だけ、冒険の仲間を集めよう。</p></div><button id="backupOpen" class="icon-button" aria-label="バックアップと復元">⋯</button></header>
   <main>
-    <nav class="tabs" aria-label="メイン画面"><button data-screen="records" class="active">記録</button><button data-screen="gacha">ガチャ</button><button data-screen="collection">図鑑</button></nav>
+    <nav class="tabs" aria-label="メイン画面"><button data-screen="records" class="active"><img src="./assets/ui/tab_icon_record.png" alt="" width="28" height="28"><span>記録</span></button><button data-screen="gacha"><img src="./assets/ui/tab_icon_gacha.png" alt="" width="28" height="28"><span>ガチャ</span></button><button data-screen="collection"><img src="./assets/ui/tab_icon_zukan.png" alt="" width="28" height="28"><span>図鑑</span></button></nav>
 
     <section id="screen-records" class="screen active">
       <div class="summary-grid">
@@ -28,7 +28,7 @@
           <div class="summary-total-row"><span>プランク</span><strong id="plankProgress">0秒</strong></div>
         </article>
       </div>
-      <p class="summary-note">ガチャ獲得条件：1,000歩ごと・スクワット10回ごと・プランク60秒ごとに1回、散歩1kmごとに2回</p>
+      <p class="summary-note">ガチャ獲得条件：歩数1,000歩・スクワット10回・プランク60秒ごとに各1回、散歩1kmごとに2回。</p>
       <article class="card">
         <h2>歩行記録を取り込む</h2>
         <div class="import-columns">
@@ -87,13 +87,13 @@
     </section>
 
     <section id="screen-gacha" class="screen">
-      <article class="card gacha-card"><img class="gacha-chest" src="./WALK_QUEST_chest_C2.png" width="1362" height="1155" alt=""><p class="muted">共通ガチャ</p><strong id="gachaCount" class="big-number">0</strong><span>回分</span><div class="actions center"><button id="drawOne">1回引く</button><button id="drawTen" class="secondary">10連ガチャ</button></div><p id="gachaHint" class="muted"></p></article>
+      <article class="card gacha-card"><div class="gacha-stage"><img class="gacha-label" src="./assets/ui/gacha_label.png" width="497" height="123" alt="共通ガチャ"><strong id="gachaCount" class="big-number">0</strong><span>回</span><img class="gacha-chest" src="./WALK_QUEST_chest_C2.png" width="1362" height="1155" alt=""></div><div class="gacha-floor"><div class="actions center"><button id="drawOne">1回引く</button><button id="drawTen">10連ガチャ</button></div><p id="gachaHint" class="muted"></p></div></article>
       <div id="drawResults" class="draw-grid"></div>
     </section>
 
     <section id="screen-collection" class="screen">
-      <article class="card collection-summary"><strong id="collectionCount">0/67種類</strong><span>獲得した種類</span></article>
-      <div class="segmented categories"><button data-category="all" class="selected">すべて</button><button data-category="monster">モンスター</button><button data-category="equipment">装備品</button><button data-category="spell">呪文</button></div>
+      <article class="card collection-summary"><span>獲得した種類</span><strong id="collectionCount">0/67種類</strong></article>
+      <div class="segmented categories"><button data-category="all" class="selected">全カテゴリ</button><button data-category="monster">モンスター</button><button data-category="equipment">装備品</button><button data-category="spell">呪文</button></div>
       <div class="ownership-filter"><span class="muted">獲得状況</span><div class="segmented ownership-buttons" role="group" aria-label="獲得状況"><button data-ownership="owned" class="selected" aria-pressed="true">獲得済み</button><button data-ownership="all" aria-pressed="false">すべて</button><button data-ownership="unowned" aria-pressed="false">未獲得</button></div></div>
       <div id="collectionGrid" class="collection-grid"></div>
     </section>
@@ -103,7 +103,7 @@
   <dialog id="backupDialog"><div class="dialog-head"><h2>バックアップ・復元</h2><button class="icon-button close-dialog" aria-label="閉じる">×</button></div><p class="muted">歩行記録・ガチャ・図鑑資料と画像を含むJSONファイルです。端末外の安全な場所にも保管してください。</p><button id="exportBackup" class="full">JSONをダウンロード</button><label class="button secondary full file-button" for="restoreFile">バックアップから復元</label><input id="restoreFile" type="file" accept="application/json,.json"><p id="backupStatus" class="muted"></p></dialog>
   <div id="toast" role="status" aria-live="polite" class="toast hidden"></div>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="./app.js?v=1.6.1-5"></script>
+  <script src="./app.js?v=1.6.17"></script>
   <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));</script>
 </body>
 </html>
