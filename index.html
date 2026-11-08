@@ -10,7 +10,7 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <title>WALK QUEST</title>
-  <link rel="stylesheet" href="./styles.css?v=1.6.17-2">
+  <link rel="stylesheet" href="./styles.css?v=1.6.18">
 </head>
 <body>
   <header class="top"><div><h1><span class="title-line">WALK QUEST <span id="appVersion" class="app-version"></span></span></h1><p>歩いた分だけ、冒険の仲間を集めよう。</p></div><button id="backupOpen" class="icon-button" aria-label="バックアップと復元">⋯</button></header>
@@ -103,7 +103,7 @@
   <dialog id="backupDialog"><div class="dialog-head"><h2>バックアップ・復元</h2><button class="icon-button close-dialog" aria-label="閉じる">×</button></div><p class="muted">歩行記録・ガチャ・図鑑資料と画像を含むJSONファイルです。端末外の安全な場所にも保管してください。</p><button id="exportBackup" class="full">JSONをダウンロード</button><label class="button secondary full file-button" for="restoreFile">バックアップから復元</label><input id="restoreFile" type="file" accept="application/json,.json"><p id="backupStatus" class="muted"></p></dialog>
   <div id="toast" role="status" aria-live="polite" class="toast hidden"></div>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="./app.js?v=1.6.17"></script>
+  <script src="./app.js?v=1.6.18"></script>
   <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));</script>
 </body>
 </html>

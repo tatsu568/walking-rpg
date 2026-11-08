@@ -1,5 +1,5 @@
 /* Walking RPG: local-first static PWA. */
-const APP_VERSION='v1.6.17';
+const APP_VERSION='v1.6.18';
 const Core = (() => {
   const catalog = [];
   const add = (category, rarityRows) => {
