@@ -137,7 +137,7 @@ pre{color:#5a4d39;background:#eee1c6;border:1px solid #d3bc90;border-radius:4px}
 dialog::backdrop{background:#201c16b8}
 #itemDialog{background:transparent;box-shadow:none}
 #itemDialog>.detail-panel{border-radius:6px}
-.detail-text{color:var(--ink);line-height:1.7}
+.detail-text{color:var(--ink);line-height:1.7;overflow-wrap:anywhere}
 .search-links a{border-radius:4px}
 .toast{color:#fff3d4;background:#203d57;border:1px solid #c9a357;border-radius:5px;box-shadow:0 3px 12px #211d1955}
 @media(max-width:359px){.top h1{font-size:1.3rem;letter-spacing:0}.tabs{gap:5px}.categories button{padding-inline:7px}}
