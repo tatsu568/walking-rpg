@@ -1,5 +1,5 @@
 /* Walking RPG: local-first static PWA. */
-const APP_VERSION='v1.6.20';
+const APP_VERSION='v1.6.22';
 
 // Fixed DQ1 ID correspondence and bundled text from the workbook.
 const dq1CommonIds = Object.freeze({
