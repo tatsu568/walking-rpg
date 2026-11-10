@@ -1,5 +1,5 @@
 /* Walking RPG: local-first static PWA. */
-const APP_VERSION='v1.6.22';
+const APP_VERSION='v1.6.25';
 
 // Fixed DQ1 ID correspondence and bundled text from the workbook.
 const dq1CommonIds = Object.freeze({
@@ -333,6 +333,9 @@ const Core = (() => {
     for (const item of catalog) {
       const v=s.items[item.id];
       if (!v || !Number.isInteger(v.count) || v.count<0 || v.count>3 || !(v.main===null||(typeof v.main==='string'&&v.main.startsWith('data:image/'))) || descriptionFields.some(({key})=>Object.hasOwn(v,key)&&typeof v[key]!=='string')) throw Error(`図鑑データが不正です：${item.name}`);
+      if (Object.hasOwn(v, 'read') && typeof v.read !== 'boolean') {
+        throw Error(`図鑑の既読状態が不正です：${item.name}`);
+      }
       delete v.info;
       delete v.text;
     }
@@ -624,6 +627,12 @@ const Core = (() => {
       else{const ph=document.createElement('div');ph.className='tile-empty';if(data.count)ph.textContent='◇';else ph.append(lockIcon());tile.append(ph);}
       const name=document.createElement('strong');name.textContent=data.count?item.name:'？？？';tile.append(name);
       const meta=document.createElement('small');if(data.count){meta.className='rarity-meta';meta.append(rarityStars(item.rarity),acquisitionCount(String(data.count)));}else meta.textContent='未獲得';tile.append(meta);
+      if (data.count && !data.read) {
+        const badge = document.createElement('span');
+        badge.className = 'unread-badge';
+        badge.textContent = '未読';
+        tile.append(badge);
+      }
       tile.onclick=()=>{if(!data.count){toast('ガチャで獲得すると詳細を開けます');return;}openItem(item);};root.append(tile);
     });
   }
@@ -653,6 +662,9 @@ const Core = (() => {
   itemDialog.addEventListener('pointerdown',e=>{detailBackdropDown=isDetailBackdrop(e);});
   itemDialog.addEventListener('pointercancel',()=>{detailBackdropDown=false;});
   itemDialog.addEventListener('close',()=>{detailBackdropDown=false;});
+  itemDialog.addEventListener('cancel', e => {
+    if (itemDialog.inert) e.preventDefault();
+  });
   itemDialog.addEventListener('click',e=>{const close=!editing&&detailBackdropDown&&isDetailBackdrop(e);detailBackdropDown=false;if(close)itemDialog.close();});
 
   function renderDescription(root, item, data, field) {
@@ -729,6 +741,28 @@ const Core = (() => {
         root.append(img);
       }
       descriptionFields.forEach(field => renderDescription(root, item, data, field));
+      const readToggle = document.createElement('button');
+      readToggle.type = 'button';
+      readToggle.className = 'secondary detail-edit-button';
+      readToggle.textContent = data.read ? '未読に戻す' : '読んだ';
+      readToggle.onclick = async () => {
+        const current = state.items[item.id];
+        const read = !current.read;
+        const next = { ...state, items: { ...state.items, [item.id]: { ...current, read } } };
+        itemDialog.inert = true;
+        try {
+          await dbWrite(next);
+          state = next;
+          readToggle.textContent = read ? '未読に戻す' : '読んだ';
+          renderCollection();
+        } catch (error) {
+          toast(`保存できませんでした：${error.message}`);
+        } finally {
+          itemDialog.inert = false;
+          if (itemDialog.open) readToggle.focus({ preventScroll: true });
+        }
+      };
+      root.append(readToggle);
       return;
     }
 
