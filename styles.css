@@ -271,3 +271,86 @@ button,.button,.import-paste,.detail-image-paste,h2,h3,
 #screen-records :is(.month-navigation button,.this-month-button){position:relative;isolation:isolate;border-radius:0;color:#665032;background:linear-gradient(#ebd294,#b08c49);box-shadow:none;text-shadow:none;clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px)}
 #screen-records :is(.month-navigation button,.this-month-button)::before{content:"";position:absolute;inset:1.5px;z-index:-1;pointer-events:none;background:linear-gradient(#fff6df,#e5d2a9);box-shadow:inset 0 2px 0 #ffffff66,inset 0 -2px 0 #b99b6240;clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)}
 #screen-records :is(.month-navigation button,.this-month-button):focus-visible{outline-offset:-5px}
+
+
+.record-import-card {
+  padding-block:12px;
+}
+.record-import-card > h2 {
+  margin-bottom:8px;
+  padding-bottom:6px;
+}
+.record-import-card .import-column {
+  padding-block:6px;
+}
+.record-import-card .import-column h3 {
+  margin-bottom:6px;
+  text-align:left;
+}
+.record-import-card .import-paste {
+  min-height:50px;
+  padding-block:4px;
+  padding-inline:8px;
+  justify-content:flex-start;
+  text-align:left;
+}
+.record-import-card .import-hint {
+  margin-block:4px;
+  text-align:left;
+}
+.record-import-card .import-files summary {
+  display:list-item;
+  min-height:44px;
+  line-height:20px;
+}
+.record-import-card > label {
+  margin:0 0 4px;
+}
+.record-import-card > .actions {
+  margin-block:6px 0;
+}
+.record-import-card > p.muted {
+  margin-block:4px 0;
+}
+.record-import-card > p.muted:empty {
+  margin:0;
+}
+#exerciseJson {
+  display:block;
+  height:60px;
+  padding-block:6px;
+  font-size:16px;
+  line-height:1.35;
+  overflow:auto;
+  resize:vertical;
+}
+.exercise-preview {
+  overflow-wrap:anywhere;
+}
+.exercise-preview ul {
+  margin:4px 0;
+  padding-inline-start:1.25em;
+}
+.saved-day {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 40px;
+  align-items:center;
+  gap:6px;
+  padding:6px 0;
+  border-bottom:1px solid #d7c49e;
+}
+.saved-day > .saved-edit {
+  grid-column:1 / -1;
+}
+.saved-day-values {
+  display:grid;
+  grid-template-columns:minmax(0,1.2fr) repeat(2,minmax(0,1fr));
+  gap:2px 4px;
+  font-size:.85rem;
+  font-variant-numeric:tabular-nums;
+  text-align:center;
+  overflow-wrap:anywhere;
+}
+.saved-day-values > :first-child {
+  text-align:left;
+}

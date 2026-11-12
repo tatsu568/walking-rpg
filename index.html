@@ -10,7 +10,7 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <title>WALK QUEST</title>
-  <link rel="stylesheet" href="./styles.css?v=1.6.25">
+  <link rel="stylesheet" href="./styles.css?v=1.6.27">
 </head>
 <body>
   <header class="top"><div><h1><span class="title-line">WALK QUEST <span id="appVersion" class="app-version"></span></span></h1><p>歩いた分だけ、冒険の仲間を集めよう。</p></div><button id="backupOpen" class="icon-button" aria-label="バックアップと復元">⋯</button></header>
@@ -29,55 +29,38 @@
         </article>
       </div>
       <p class="summary-note">ガチャ獲得条件：歩数1,000歩・スクワット10回・プランク60秒ごとに各1回、散歩1kmごとに2回。</p>
-      <article class="card">
+      <article class="card record-import-card">
         <h2>歩行記録を取り込む</h2>
-        <div class="import-columns">
-          <section class="import-column" aria-labelledby="dailyImportHeading">
-            <h3 id="dailyImportHeading">日次歩数</h3>
-            <div id="dailyPasteTarget" class="import-paste" contenteditable="true" role="textbox" aria-label="日次歩数の画像貼り付け領域" aria-describedby="dailyPasteHint" spellcheck="false">画像を貼り付け</div>
-            <p id="dailyPasteHint" class="import-hint">長押ししてペースト</p>
-            <button id="dailyImportView" class="secondary import-view hidden" type="button">画像・結果を確認</button>
-            <details class="import-files"><summary>写真・ファイル</summary><label class="button secondary" for="dailyScreenshot">画像を選ぶ</label><input id="dailyScreenshot" type="file" accept="image/*" hidden></details>
-          </section>
-          <section class="import-column" aria-labelledby="walkImportHeading">
-            <h3 id="walkImportHeading">散歩一覧</h3>
-            <div id="walkPasteTarget" class="import-paste" contenteditable="true" role="textbox" aria-label="散歩一覧の画像貼り付け領域" aria-describedby="walkPasteHint" spellcheck="false">画像を貼り付け</div>
-            <p id="walkPasteHint" class="import-hint">長押ししてペースト</p>
-            <button id="walkImportView" class="secondary import-view hidden" type="button">画像・結果を確認</button>
-            <details class="import-files"><summary>写真・ファイル</summary><label class="button secondary" for="walkScreenshot">画像を選ぶ</label><input id="walkScreenshot" type="file" accept="image/*" hidden></details>
-          </section>
-        </div>
+        <section class="import-column" aria-labelledby="dailyImportHeading">
+          <h3 id="dailyImportHeading">日次歩数</h3>
+          <div id="dailyPasteTarget" class="import-paste" contenteditable="true" role="textbox" aria-label="日次歩数の画像貼り付け領域" aria-describedby="dailyPasteHint" spellcheck="false">画像を貼り付け</div>
+          <p id="dailyPasteHint" class="import-hint">長押ししてペースト</p>
+          <details class="import-files"><summary>写真・ファイル</summary><label class="button secondary" for="dailyScreenshot">画像を選ぶ</label><input id="dailyScreenshot" type="file" accept="image/*" hidden></details>
+        </section>
         <img id="screenshotPreview" class="screenshot hidden" alt="選択したスクリーンショット">
-        <div class="actions import-ocr-actions"><button id="runOcr" disabled>OCRを実行</button><button id="cancelImport" class="secondary hidden" type="button">キャンセル</button></div><p id="ocrStatus" class="muted" role="status">画像を選択してください</p>
+        <div class="actions import-ocr-actions"><button id="runOcr" disabled>OCRを実行</button><button id="cancelImport" class="secondary hidden" type="button">キャンセル</button></div><p id="ocrStatus" class="muted" role="status"></p>
         <progress id="ocrProgress" max="1" value="0" class="hidden"></progress>
         <p id="ocrTime" class="muted"></p><pre id="ocrError" class="error hidden"></pre>
       </article>
       <article id="ocrResults" class="card hidden">
         <h2 id="ocrHeading">読み取り結果</h2>
-        <div id="dailyResult" class="hidden">
+        <div id="dailyResult">
           <label>日付</label><div class="date-control"><input id="dailyDate" type="date"><button id="dailyToday" class="secondary">今日</button></div>
           <label for="dailySteps">総歩数</label><input id="dailySteps" type="number" min="0" step="1" inputmode="numeric" placeholder="未取得">
           <button id="saveDaily" class="full">この日次記録を保存</button>
         </div>
-        <div id="walkResult" class="hidden"><p class="muted">日付・距離を確認してください。同じ日付と距離の保存済み候補は初期状態で未選択です。</p><div id="walkCandidates"></div><div class="candidate-footer"><strong>今回追加する距離：<span id="selectedDistance">0.00</span>km</strong><button id="saveWalks" class="full">選択した散歩を追加</button></div></div>
         <details><summary>OCR生テキスト</summary><pre id="ocrText"></pre></details>
       </article>
-      <article class="card">
-        <h2>筋トレ記録</h2>
-        <p class="muted">各日の合計を入力してください。</p>
-        <form id="strengthForm">
-          <label class="saved-edit-field" for="strengthDate">日付</label>
-          <div class="saved-edit-control"><input id="strengthDate" type="date" required></div>
-          <div class="strength-values">
-            <label class="saved-edit-field">スクワット（回）<input id="squatCount" type="number" min="0" step="1" inputmode="numeric" value="0" required></label>
-            <label class="saved-edit-field">プランク（秒）<input id="plankSeconds" type="number" min="0" step="1" inputmode="numeric" value="0" required></label>
-          </div>
-          <button id="saveStrength" class="full" type="submit">この日の合計を保存</button>
-        </form>
-        <details class="strength-history">
-          <summary>保存済みの筋トレ記録</summary>
-          <div id="strengthRecords"></div>
-        </details>
+      <article class="card record-import-card">
+        <h2>運動記録アプリから取り込み</h2>
+        <label for="exerciseJson">連携用JSON</label>
+        <textarea id="exerciseJson" rows="2" placeholder="長押ししてペースト" spellcheck="false"></textarea>
+        <div id="exercisePreview" class="exercise-preview"></div>
+        <p id="exerciseStatus" class="muted" role="status"></p>
+        <div class="actions">
+          <button id="saveExercise" type="button" disabled>保存</button>
+          <button id="cancelExercise" type="button" class="secondary">キャンセル</button>
+        </div>
       </article>
       <article class="card saved-card"><div class="section-title"><h2>保存済み記録</h2></div>
         <div class="month-navigation"><button id="savedPrevMonth" class="secondary">前月</button><strong id="savedMonthLabel"></strong><button id="savedNextMonth" class="secondary">次月</button></div>
@@ -103,7 +86,7 @@
   <dialog id="backupDialog"><div class="dialog-head"><h2>バックアップ・復元</h2><button class="icon-button close-dialog" aria-label="閉じる">×</button></div><p class="muted">歩行記録・ガチャ・図鑑資料と画像を含むJSONファイルです。端末外の安全な場所にも保管してください。</p><button id="exportBackup" class="full">JSONをダウンロード</button><label class="button secondary full file-button" for="restoreFile">バックアップから復元</label><input id="restoreFile" type="file" accept="application/json,.json"><p id="backupStatus" class="muted"></p></dialog>
   <div id="toast" role="status" aria-live="polite" class="toast hidden"></div>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="./app.js?v=1.6.25"></script>
+  <script src="./app.js?v=1.6.27"></script>
   <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));</script>
 </body>
 </html>
